@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zb2uXPioX2tSBZ/nzs586nTXqlwhCFfu/kvKt3C0VcY='; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-nqE320bXEabDS0imijrBKneD113S52c9RRBKEWH8s8g='; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -350,7 +350,7 @@ const KDF_ITER = 600000;
 const DAY = 86400000;
 const IN_FRAME = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 const CAN_DOWNLOAD = !IN_FRAME;
-const CAN_FS = !IN_FRAME && typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function';
+const CAN_FS = !IN_FRAME && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function';
 const CAN_SHARE = !IN_FRAME && !!navigator.share && !!navigator.canShare && (() => { try { return navigator.canShare({ files: [new File(['x'], 't.txt', { type: 'text/plain' })] }); } catch (e) { return false; } })();
 const enc = new TextEncoder(), dec = new TextDecoder();
 const $ = (s, r = document) => r.querySelector(s);
@@ -554,6 +554,7 @@ const setMeter = (el, pw) => { el.dataset.s = pw ? strength(pw).score : 0; };
 let V = null; // open vault: { key, salt, iter, data, prev:[] }
 const ui = { group: 'all', q: '', selecting: false, sel: new Set() };
 let lastAct = now();
+let updateReady = false; // a new app version is waiting for the next lock
 
 /* ---------- toast & clipboard ---------- */
 let toastT, clipT;
@@ -787,6 +788,7 @@ function lock() {
   $('#list').innerHTML = ''; $('#groups').innerHTML = ''; $('#banner').innerHTML = ''; $('#q').value = '';
   ui.sel.clear(); ui.selecting = false; $('#selbar').hidden = true;
   showLock();
+  if (updateReady) location.reload();
 }
 function checkIdle() { if (V && now() - lastAct > V.data.settings.autolock * 60000) lock(); }
 const groupById = id => (V && id && V.data.groups.find(g => g.id === id)) || null;
@@ -1332,9 +1334,10 @@ function openSync(opts = {}) {
       if (F('x_save')) F('x_save').onclick = () => { if (!prepared) return; download(prepared.name, prepared.json); markBackup(prepared.scope); toast('Файл сохранён в «Загрузки»'); };
       if (F('x_share')) F('x_share').onclick = () => {
         if (!prepared) return;
-        let file = new File([prepared.json], prepared.name, { type: 'application/octet-stream' });
-        if (!navigator.canShare({ files: [file] })) file = new File([prepared.json], prepared.name + '.txt', { type: 'text/plain' });
-        navigator.share({ files: [file], title: prepared.name }).then(() => markBackup(prepared.scope), e => { if (e.name !== 'AbortError') toast('Не удалось поделиться: ' + e.message, 'err'); });
+        // Android shares only well-known file types, so the file travels as .txt (its content is still encrypted)
+        const file = new File([prepared.json], prepared.name.replace(/\.kluch$/, '.txt'), { type: 'text/plain' });
+        const data = navigator.canShare({ files: [file] }) ? { files: [file], title: prepared.name } : { title: 'А-ключница', text: prepared.text };
+        navigator.share(data).then(() => markBackup(prepared.scope), e => { if (e.name !== 'AbortError') toast('Телефон не дал поделиться файлом. Нажмите «Сохранить файл» или «Скопировать как текст».', 'err'); });
       };
       F('x_copy').onclick = () => { if (!prepared) return; copyText(prepared.text, 'Зашифрованный текст скопирован. Вставьте его на другом устройстве: Синхронизация → «Вставить текст»'); markBackup(prepared.scope); };
       F('x_file').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (await importText(await f.text())) m.close(); };
@@ -1392,7 +1395,12 @@ function init() {
   setInterval(pollFile, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkIdle(); pollFile(); } });
 
-  if (!IN_FRAME && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!IN_FRAME && 'serviceWorker' in navigator && location.protocol === 'https:') {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+    // a new version took over: reload now if locked, otherwise right after the next lock
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!hadController) return; if (V) updateReady = true; else location.reload(); });
+  }
   showLock();
   loadSyncHandle();
 }
