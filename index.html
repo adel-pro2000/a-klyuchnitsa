@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zb2uXPioX2tSBZ/nzs586nTXqlwhCFfu/kvKt3C0VcY='; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181c24" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="А-ключница">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="А-ключница — менеджер паролей с группами и зашифрованной синхронизацией между устройствами">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>А-ключница</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c2230'/%3E%3Ccircle cx='23' cy='41' r='9' fill='none' stroke='%23e0a948' stroke-width='5'/%3E%3Cpath d='M29.5 34.5L47 17M40 24l5 5M45 19l4 4' stroke='%23e0a948' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  /* Layout: groups rail on the left + list of entries; on phones the rail becomes a horizontal strip of chips */
+  --bg:#eef0f4;
+  --surface:#ffffff;
+  --surface-2:#f5f6f9;
+  --ink:#171b24;
+  --muted:#5f6676;
+  --line:#dde1e8;
+  --brass:#9a6410;
+  --brass-soft:#f5ead6;
+  --primary:#1c2230;
+  --on-primary:#ffffff;
+  --danger:#c62f2f;
+  --ok:#1f8a4c;
+  --warn:#b26b00;
+  --focus:#3b66d6;
+  --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Roboto Mono", monospace;
+  --r:14px;
+  --shadow: 0 1px 2px rgba(20,24,36,.05), 0 6px 20px rgba(20,24,36,.06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101319; --surface:#181c24; --surface-2:#1f242e; --ink:#e9ecf2; --muted:#9aa2b2; --line:#2b313d;
+    --brass:#e0a948; --brass-soft:#3a2f1a; --primary:#e9ecf2; --on-primary:#12151b;
+    --danger:#ff6b6b; --ok:#46c983; --warn:#f0a73a; --focus:#8aa7ff;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101319; --surface:#181c24; --surface-2:#1f242e; --ink:#e9ecf2; --muted:#9aa2b2; --line:#2b313d;
+  --brass:#e0a948; --brass-soft:#3a2f1a; --primary:#e9ecf2; --on-primary:#12151b;
+  --danger:#ff6b6b; --ok:#46c983; --warn:#f0a73a; --focus:#8aa7ff;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{font-size:16px}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h1,h2,h3,h4{text-wrap:balance;font-family:var(--font-display)}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;opacity:0}
+.sp{flex:1}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);letter-spacing:.02em}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:var(--surface);font-weight:600;white-space:nowrap;text-decoration:none;position:relative}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.btn.primary:hover{background:var(--primary);filter:brightness(1.15)}
+.btn.danger{color:var(--danger)}
+.btn.danger.solid{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.sm{min-height:34px;padding:0 12px;font-size:14px}
+.btn.block{width:100%}
+.btn.link{background:none;border:none;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-weight:500;min-height:36px;white-space:normal}
+.btn:disabled{opacity:.5;cursor:default;filter:none}
+.icon-btn{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:10px;border:none;background:transparent;color:var(--muted);position:relative;flex:none;text-decoration:none}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink)}
+.icon-btn[aria-disabled="true"]{opacity:.35;pointer-events:none}
+.dot{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px var(--surface)}
+
+/* fields */
+input[type=text],input[type=password],input[type=search],input:not([type]),select,textarea{width:100%;min-height:44px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--surface);outline:none;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+textarea{resize:vertical;line-height:1.4}
+input:focus,select:focus,textarea:focus{border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 22%,transparent)}
+.fld{display:grid;gap:6px}
+.lbl{font-size:13px;color:var(--muted);font-weight:600}
+.row{display:flex;gap:4px;align-items:center}
+.row>input{flex:1;min-width:0}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;cursor:pointer}
+.check input{width:19px;height:19px;accent-color:var(--primary);flex:none;margin:0}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;height:4px}
+.meter i{background:var(--line);border-radius:2px}
+.meter[data-s="1"] i:nth-child(1){background:var(--danger)}
+.meter[data-s="2"] i:nth-child(-n+2){background:var(--warn)}
+.meter[data-s="3"] i:nth-child(-n+3){background:var(--ok)}
+.meter[data-s="4"] i{background:var(--ok)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.note{font-size:13.5px;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);margin:0}
+.note.warn{background:var(--brass-soft);border-color:transparent}
+.err{color:var(--danger);font-size:14px}
+.err:empty{display:none}
+.txt{margin:0}
+
+/* lock screen */
+.lock{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+.lock-card{width:100%;max-width:410px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:28px 24px 22px;box-shadow:var(--shadow);display:grid;gap:14px}
+.lock-head{display:grid;justify-items:center;gap:4px;text-align:center;margin-bottom:4px}
+.logo{width:60px;height:60px;display:block}
+.lock h1{font-size:26px;margin:6px 0 0;letter-spacing:-.01em}
+.lock-sub{margin:0;color:var(--muted)}
+.lock-foot{margin:0;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;text-align:center;max-width:410px}
+.lock-foot svg{width:16px;height:16px}
+.view{display:grid;gap:12px}
+
+/* app shell */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
+.topbar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;font-family:var(--font-display);width:236px;flex:none}
+.brand svg{width:32px;height:32px}
+.search{flex:1;max-width:560px;position:relative}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);width:18px;height:18px;pointer-events:none}
+.search input{padding-left:38px;background:var(--surface-2);border-color:transparent;min-height:42px}
+.top-actions{display:flex;gap:2px;margin-left:auto}
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:0}
+.groups{border-right:1px solid var(--line);padding:14px 10px max(14px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));overflow:auto;display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.gchip{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:1px solid transparent;border-radius:11px;background:transparent;text-align:left;font-weight:550;min-height:42px}
+.gchip:hover{background:var(--surface-2)}
+.gchip.on{background:var(--brass-soft)}
+.ge{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--gc,var(--muted)) 17%,transparent);color:var(--gc,var(--muted));font-size:15px;flex:none;line-height:1}
+.ge svg{width:16px;height:16px}
+.gn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.gsep{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:16px 10px 6px;font-weight:700}
+.gchip.add{color:var(--muted);font-weight:500}
+.main{overflow:auto;padding:20px 24px calc(100px + env(safe-area-inset-bottom));min-width:0;-webkit-overflow-scrolling:touch}
+.list-head{display:flex;align-items:center;gap:8px;margin:0 0 12px;max-width:900px;min-height:40px}
+.list-head h2{font-size:21px;margin:0;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;min-width:0}
+.list-head h2 .ttl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-head .cnt{color:var(--muted);font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.list{display:grid;gap:8px;max-width:900px}
+.item{display:flex;align-items:center;gap:12px;padding:9px 8px 9px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;min-width:0;user-select:none;-webkit-user-select:none}
+.item:hover{border-color:color-mix(in srgb,var(--ink) 25%,var(--line))}
+.item.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+.av{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:700;color:#fff;flex:none;font-size:17px;font-family:var(--font-display)}
+.meta{flex:1;min-width:0;display:grid}
+.meta .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta .s{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:12.5px;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;flex:none;border:1px solid var(--line);max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.acts{display:flex;gap:0}
+.star{color:var(--brass)}
+.chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;flex:none}
+.chk svg{width:15px;height:15px;stroke-width:2.6}
+.item.sel .chk{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.empty{max-width:560px;margin:40px auto;text-align:center;display:grid;gap:12px;justify-items:center;color:var(--muted)}
+.empty h3{margin:0;color:var(--ink);font-size:19px}
+.empty p{margin:0}
+.empty-ic{width:64px;height:64px;border-radius:20px;background:var(--brass-soft);color:var(--brass);display:grid;place-items:center}
+.empty-ic svg{width:30px;height:30px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns.center{justify-content:center}
+.fab{position:fixed;right:max(22px,env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:18px;border:none;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;box-shadow:0 10px 28px rgba(10,14,24,.28);z-index:10}
+.fab svg{width:26px;height:26px;stroke-width:2.2}
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;padding:7px 7px 7px 16px;background:var(--primary);color:var(--on-primary);border-radius:16px;box-shadow:0 10px 30px rgba(10,14,24,.3);z-index:11;max-width:calc(100% - 24px)}
+.selbar .btn{background:transparent;color:inherit;border-color:color-mix(in srgb,var(--on-primary) 30%,transparent)}
+.selbar .btn:hover{background:color-mix(in srgb,var(--on-primary) 12%,transparent)}
+.selbar .icon-btn{color:inherit}
+.selbar .icon-btn:hover{background:color-mix(in srgb,var(--on-primary) 12%,transparent)}
+.selcount{font-weight:600;white-space:nowrap;margin-right:4px;font-variant-numeric:tabular-nums}
+.banner{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--brass-soft);margin:0 0 14px;max-width:900px;font-size:14px;flex-wrap:wrap}
+.banner>span{flex:1;min-width:220px}
+.banner.err{background:color-mix(in srgb,var(--danger) 14%,var(--surface))}
+.banner svg{color:var(--brass)}
+
+/* modals */
+.overlay{position:fixed;inset:0;background:rgba(10,12,18,.48);display:grid;place-items:center;padding:16px;z-index:50;opacity:0;transition:opacity .16s}
+.overlay.in{opacity:1}
+.sheet{width:100%;max-width:540px;max-height:calc(100% - 32px);overflow:auto;background:var(--surface);border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.32);display:flex;flex-direction:column;transform:translateY(10px);transition:transform .16s;overscroll-behavior:contain}
+.overlay.in .sheet{transform:none}
+.sheet-h{display:flex;align-items:center;gap:8px;padding:14px 10px 6px 20px;position:sticky;top:0;background:var(--surface);z-index:2}
+.sheet-h h3{margin:0;font-size:19px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-b{padding:4px 20px 20px;display:grid;gap:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:4px}
+.sec{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}
+.sec h4{margin:0;font-size:15.5px;display:flex;align-items:center;gap:8px}
+.sec h4 svg{color:var(--brass)}
+.sec p{margin:0;font-size:13.5px;color:var(--muted)}
+.sec .note{background:var(--surface)}
+.status{display:flex;gap:8px;align-items:flex-start;font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.status b{font-weight:600}
+.status .st-dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:var(--muted)}
+.status[data-s="ok"] .st-dot{background:var(--ok)}
+.status[data-s="needperm"] .st-dot,.status[data-s="needpass"] .st-dot{background:var(--warn)}
+.status[data-s="error"] .st-dot{background:var(--danger)}
+.menu-list{display:grid;gap:2px}
+.menu-list button{display:flex;gap:12px;align-items:center;padding:11px 12px;border:none;background:transparent;border-radius:11px;text-align:left;font-weight:550;min-height:48px;width:100%}
+.menu-list button:hover{background:var(--surface-2)}
+.menu-list button.danger{color:var(--danger)}
+.menu-list button svg{color:var(--muted)}
+.menu-list button.danger svg{color:var(--danger)}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.emoji-grid button{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:19px;padding:0;line-height:1}
+.emoji-grid button.on{border-color:var(--brass);background:var(--brass-soft);box-shadow:0 0 0 1px var(--brass)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches button{width:32px;height:32px;border-radius:50%;border:none;padding:0;box-shadow:inset 0 0 0 3px var(--surface);outline:2px solid transparent;outline-offset:1px}
+.swatches button.on{outline-color:var(--ink)}
+.gprev{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line);font-weight:600}
+.gen-out{font-family:var(--mono);font-size:19px;padding:14px 16px;border-radius:12px;background:var(--surface-2);word-break:break-all;min-height:58px;border:1px solid var(--line);line-height:1.35;letter-spacing:.03em}
+.gen-out .cd{color:#2f6fd6}
+.gen-out .cs{color:var(--brass)}
+input[type=range]{width:100%;accent-color:var(--primary);min-height:28px}
+.opts{display:grid;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}
+.kv span{color:var(--muted)}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14.5px}
+details.how{font-size:14px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details.how summary{cursor:pointer;font-weight:600}
+details.how ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
+.file-chosen{font-size:13.5px;color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--primary);color:var(--on-primary);padding:11px 16px;border-radius:12px;font-size:14.5px;z-index:100;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px);width:max-content;text-align:center}
+.toast.err{background:var(--danger);color:#fff}
+
+@media (max-width:760px){
+  .topbar{flex-wrap:wrap;gap:8px 6px;padding-bottom:8px}
+  .brand{width:auto;flex:1;font-size:17px}
+  .brand svg{width:28px;height:28px}
+  .top-actions{margin-left:0}
+  .search{order:3;flex-basis:100%;max-width:none}
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .groups{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px 12px;gap:6px;scrollbar-width:none}
+  .groups::-webkit-scrollbar{display:none}
+  .gsep{display:none}
+  .gchip{width:auto;flex:none;padding:4px 12px 4px 4px;border-radius:999px;border-color:var(--line);background:var(--surface);min-height:38px}
+  .gchip.on{border-color:var(--brass);background:var(--brass-soft)}
+  .gchip .ge{width:28px;height:28px;border-radius:50%}
+  .gchip.add{padding-left:12px}
+  .main{padding:14px 12px calc(100px + env(safe-area-inset-bottom))}
+  .badge{display:none}
+  .item{gap:10px;padding-left:10px}
+}
+@media (max-width:600px){
+  .overlay{place-items:end stretch;padding:0}
+  .sheet{max-width:none;border-radius:20px 20px 0 0;max-height:94%;padding-bottom:env(safe-area-inset-bottom)}
+  .emoji-grid{grid-template-columns:repeat(6,1fr)}
+}
+@media (prefers-reduced-motion: reduce){ .overlay,.sheet{transition:none} }
+</style>
+</head>
+<body>
+
+<section id="lock" class="lock" hidden>
+  <div class="lock-card">
+    <div class="lock-head">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1c2230"/><circle cx="23" cy="41" r="9" fill="none" stroke="#e0a948" stroke-width="5"/><path d="M29.5 34.5L47 17M40 24l5 5M45 19l4 4" stroke="#e0a948" stroke-width="5" stroke-linecap="round" fill="none"/></svg>
+      <h1>А-ключница</h1>
+      <p class="lock-sub" id="lockSub">Менеджер паролей</p>
+    </div>
+
+    <div class="view" id="createView" hidden>
+      <div class="fld">
+        <label class="lbl" for="newPass">Придумайте мастер-пароль</label>
+        <div class="row"><input type="password" id="newPass" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-eye></button></div>
+        <div class="meter" id="newMeter"><i></i><i></i><i></i><i></i></div>
+        <p class="hint" id="newHint">Не короче 10 символов. Надёжнее всего фраза из 4–5 слов, например «синий-трамвай-ест-облака».</p>
+      </div>
+      <div class="fld">
+        <label class="lbl" for="newPass2">Повторите мастер-пароль</label>
+        <input type="password" id="newPass2" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+      <p class="note warn">Мастер-пароль нигде не хранится и не восстанавливается. Если его забыть, открыть пароли не сможет никто, включая вас.</p>
+      <div class="err" id="createErr"></div>
+      <button type="button" class="btn primary block" id="createBtn">Создать хранилище</button>
+      <button type="button" class="btn block" id="restoreBtn" data-ic="download">Перенести с другого устройства</button>
+      <button type="button" class="btn ghost block" id="demoBtn" hidden>Открыть демо с примерами</button>
+    </div>
+
+    <div class="view" id="unlockView" hidden>
+      <div class="fld">
+        <label class="lbl" for="unlockPass">Мастер-пароль</label>
+        <div class="row"><input type="password" id="unlockPass" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-eye></button></div>
+      </div>
+      <div class="err" id="unlockErr"></div>
+      <button type="button" class="btn primary block" id="unlockBtn">Открыть</button>
+      <button type="button" class="btn link" id="forgotBtn">Забыли мастер-пароль?</button>
+    </div>
+  </div>
+  <p class="lock-foot" data-ic="shield">Пароли зашифрованы и хранятся только на ваших устройствах</p>
+</section>
+
+<section id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1c2230"/><circle cx="23" cy="41" r="9" fill="none" stroke="#e0a948" stroke-width="5"/><path d="M29.5 34.5L47 17M40 24l5 5M45 19l4 4" stroke="#e0a948" stroke-width="5" stroke-linecap="round" fill="none"/></svg>
+      <span>А-ключница</span>
+    </div>
+    <div class="search" data-ic="search"><input id="q" type="search" placeholder="Поиск по всем записям" aria-label="Поиск" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="top-actions">
+      <button type="button" class="icon-btn" id="syncBtn" title="Синхронизация и перенос" aria-label="Синхронизация и перенос" data-ic="sync"><span class="dot" id="syncDot" hidden></span></button>
+      <button type="button" class="icon-btn" id="genBtn" title="Генератор паролей" aria-label="Генератор паролей" data-ic="dice"></button>
+      <button type="button" class="icon-btn" id="settingsBtn" title="Настройки" aria-label="Настройки" data-ic="settings"></button>
+      <button type="button" class="icon-btn" id="lockBtn" title="Заблокировать" aria-label="Заблокировать" data-ic="lock"></button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav id="groups" class="groups" aria-label="Группы"></nav>
+    <main class="main" id="main">
+      <div id="banner"></div>
+      <div class="list-head">
+        <h2 id="listTitle"></h2><span class="cnt" id="listCount"></span>
+        <span class="sp"></span>
+        <button type="button" class="btn ghost sm" id="groupMenuBtn" data-ic="more">Группа</button>
+        <button type="button" class="btn ghost sm" id="selectBtn">Выбрать</button>
+      </div>
+      <div id="list" class="list"></div>
+    </main>
+  </div>
+  <button type="button" class="fab" id="fab" title="Добавить запись" aria-label="Добавить запись" data-ic="plus"></button>
+  <div id="selbar" class="selbar" hidden>
+    <span class="selcount" id="selCount"></span>
+    <button type="button" class="btn sm" id="selAll">Все</button>
+    <button type="button" class="btn sm" id="selMove" data-ic="folder">В группу</button>
+    <button type="button" class="btn sm" id="selDel" aria-label="Удалить выбранные" data-ic="trash"></button>
+    <button type="button" class="icon-btn" id="selCancel" aria-label="Отменить выбор" data-ic="x"></button>
+  </div>
+</section>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+(() => {
+const APP = 'kluchnitsa';
+const STORE_KEY = 'kluchnitsa.vault.v1';
+const KDF_ITER = 600000;
+const DAY = 86400000;
+const IN_FRAME = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+const CAN_DOWNLOAD = !IN_FRAME;
+const CAN_FS = !IN_FRAME && typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function';
+const CAN_SHARE = !IN_FRAME && !!navigator.share && !!navigator.canShare && (() => { try { return navigator.canShare({ files: [new File(['x'], 't.txt', { type: 'text/plain' })] }); } catch (e) { return false; } })();
+const enc = new TextEncoder(), dec = new TextDecoder();
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const now = () => Date.now();
+
+/* ---------- icons ---------- */
+const I = {
+  lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  sync:'<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
+  settings:'<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  copy:'<rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
+  user:'<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5a7 7 0 0 1 14 0"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
+  dice:'<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/>',
+  star:'<path d="M12 4l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/>',
+  trash:'<path d="M4.5 7h15M9.5 7V5h5v2M6.5 7l1 12.5h9l1-12.5"/>',
+  external:'<path d="M13.5 4.5h6v6M19.5 4.5l-8 8"/><path d="M17 13.5v5a1 1 0 0 1-1 1H5.5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h5"/>',
+  more:'<circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  download:'<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
+  upload:'<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14"/>',
+  share:'<path d="M12 14.5V4M8 7.5L12 3.5l4 4"/><path d="M8.5 10.5h-2A1.5 1.5 0 0 0 5 12v7a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-7a1.5 1.5 0 0 0-1.5-1.5h-2"/>',
+  file:'<path d="M6.5 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M13.5 3.5V8H18"/>',
+  paste:'<rect x="5.5" y="5" width="13" height="15.5" rx="2"/><path d="M9 5V3.5h6V5M9 11h6M9 15h4"/>',
+  edit:'<path d="M4.5 19.5l1-4 10-10a2.1 2.1 0 0 1 3 3l-10 10z"/><path d="M14 7l3 3"/>',
+  shield:'<path d="M12 3.5l7 2.5v5.5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+  refresh:'<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
+  grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  inbox:'<path d="M4 13.5l2-8h12l2 8v5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M4 13.5h4.5l1 2h5l1-2H20"/>',
+  folder:'<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/>',
+  folderPlus:'<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4l2 2h8A1.5 1.5 0 0 1 20.5 9v8.5A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M12 10.5v5M9.5 13h5"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n] || ''}</svg>`;
+
+/* ---------- utils ---------- */
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function b64(buf) { const a = buf instanceof Uint8Array ? buf : new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(s) { const bin = atob(s); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+const rand = n => crypto.getRandomValues(new Uint8Array(n));
+function uid() { if (crypto.randomUUID) return crypto.randomUUID(); return Array.from(rand(16), b => b.toString(16).padStart(2, '0')).join(''); }
+function randInt(n) { const lim = Math.floor(0x100000000 / n) * n; const b = new Uint32Array(1); do { crypto.getRandomValues(b); } while (b[0] >= lim); return b[0] % n; }
+function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return a; if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return b; return c; }
+const countLabel = n => `${n} ${plural(n, 'запись', 'записи', 'записей')}`;
+function fmtDate(t) { if (!t) return '—'; return new Date(t).toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function fmtTime(t) { if (!t) return '—'; const d = new Date(t); return new Date().toDateString() === d.toDateString() ? 'сегодня в ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : fmtDate(t); }
+function dateStamp() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+const TR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya' };
+/* file names stay Latin: some browsers drop non-Latin download names */
+const safeName = s => Array.from(s).map(c => { const l = c.toLowerCase(), t = TR[l]; return t == null ? c : (c !== l && t ? t[0].toUpperCase() + t.slice(1) : t); }).join('').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+const FILE_BASE = 'A-klyuchnitsa';
+function normUrl(u) { u = (u || '').trim(); if (!u) return ''; if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return /^https?:\/\//i.test(u) ? u : ''; if (/\s/.test(u) || !/\./.test(u)) return ''; return 'https://' + u; }
+function domainOf(u) { const n = normUrl(u); if (!n) return (u || '').slice(0, 40); try { return new URL(n).hostname.replace(/^www\./, ''); } catch (e) { return (u || '').slice(0, 40); } }
+function hashColor(s) { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) >>> 0; return `hsl(${h % 360},42%,45%)`; }
+const firstLetter = s => ((Array.from((s || '').trim())[0]) || '?').toUpperCase();
+
+/* ---------- storage ---------- */
+const store = {
+  mem: {}, broken: false,
+  get(k) { try { const v = localStorage.getItem(k); return v != null ? v : (this.mem[k] != null ? this.mem[k] : null); } catch (e) { this.broken = true; return this.mem[k] != null ? this.mem[k] : null; } },
+  set(k, v) { this.mem[k] = v; try { localStorage.setItem(k, v); return true; } catch (e) { this.broken = true; return false; } },
+  del(k) { delete this.mem[k]; try { localStorage.removeItem(k); } catch (e) {} }
+};
+try { localStorage.setItem('kluchnitsa.t', '1'); localStorage.removeItem('kluchnitsa.t'); } catch (e) { store.broken = true; }
+
+/* ---------- crypto ---------- */
+const Crypto = {
+  async derive(pw, salt, iter) {
+    const base = await crypto.subtle.importKey('raw', enc.encode(pw.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  },
+  aad(iter, saltB64) { return enc.encode(`${APP}|1|PBKDF2-SHA256|${iter}|${saltB64}`); },
+  async seal(key, salt, iter, obj) {
+    const iv = rand(12), sb = b64(salt);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: this.aad(iter, sb) }, key, enc.encode(JSON.stringify(obj)));
+    return { app: APP, v: 1, kdf: 'PBKDF2-SHA256', iter, salt: sb, iv: b64(iv), ct: b64(ct) };
+  },
+  async open(key, blob) {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(blob.iv), additionalData: this.aad(blob.iter, blob.salt) }, key, unb64(blob.ct));
+    return JSON.parse(dec.decode(pt));
+  }
+};
+function parseBlob(text) {
+  text = String(text || '').trim();
+  const m = text.match(/KLUCH1:([A-Za-z0-9+/=\s]+)/);
+  if (m) text = dec.decode(unb64(m[1].replace(/\s+/g, '')));
+  const b = JSON.parse(text);
+  if (!b || b.app !== APP || b.v !== 1 || b.kdf !== 'PBKDF2-SHA256' || typeof b.salt !== 'string' || typeof b.iv !== 'string' || typeof b.ct !== 'string') throw new Error('format');
+  if (!Number.isInteger(b.iter) || b.iter < 100000 || b.iter > 5000000) throw new Error('format');
+  return b;
+}
+const toTransferText = json => 'KLUCH1:' + b64(enc.encode(json));
+
+/* ---------- data model ---------- */
+const PALETTE = ['#4f6bed', '#2f9e6e', '#d9822b', '#c2410c', '#8b5cf6', '#0e9fb5', '#d6457a', '#64748b'];
+const EMOJIS = ['💼', '🏠', '💳', '🏦', '💰', '🛒', '📧', '💬', '🎮', '🎬', '🎵', '🎓', '🏥', '✈️', '🚗', '👨‍👩‍👧', '👤', '🔧', '💻', '📱', '🌐', '⭐', '🔐', '📁'];
+const okId = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
+const str = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+function defaultGroups(t) { return [
+  { id: 'work', name: 'Работа', emoji: '💼', color: '#4f6bed', updatedAt: t },
+  { id: 'home', name: 'Дом', emoji: '🏠', color: '#2f9e6e', updatedAt: t }
+]; }
+function emptyData() { const t = now(); return { v: 1, groups: defaultGroups(t), items: [], tomb: {}, settings: normSettings({ created: t }) }; }
+function normGroup(g) {
+  if (!g || !okId(g.id)) return null; const name = str(g.name, 60).trim(); if (!name) return null;
+  return { id: g.id, name, emoji: str(g.emoji, 16) || '📁', color: /^#[0-9a-f]{6}$/i.test(g.color) ? g.color : '#64748b', updatedAt: +g.updatedAt || 0 };
+}
+function normItem(i) {
+  if (!i || !okId(i.id)) return null;
+  return { id: i.id, groupId: okId(i.groupId) ? i.groupId : null, title: str(i.title, 200).trim() || 'Без названия', username: str(i.username, 500), password: str(i.password, 4000), url: str(i.url, 2000), notes: str(i.notes, 20000), fav: !!i.fav, createdAt: +i.createdAt || 0, updatedAt: +i.updatedAt || 0 };
+}
+function normSettings(s) {
+  const o = { autolock: 5, clip: 30, lastBackup: 0, created: 0, gen: null };
+  if (!s || typeof s !== 'object') return o;
+  if ([1, 5, 15, 30, 60].includes(s.autolock)) o.autolock = s.autolock;
+  if ([0, 15, 30, 60, 120].includes(s.clip)) o.clip = s.clip;
+  o.lastBackup = +s.lastBackup || 0; o.created = +s.created || 0;
+  if (s.gen && typeof s.gen === 'object') { const g = s.gen; o.gen = { length: Math.min(64, Math.max(8, +g.length || 20)), lower: !!g.lower, upper: !!g.upper, digits: !!g.digits, symbols: !!g.symbols, noAmbig: !!g.noAmbig }; }
+  return o;
+}
+function normData(d) {
+  const out = { v: 1, groups: [], items: [], tomb: {}, settings: normSettings(d && d.settings) };
+  if (!d || typeof d !== 'object') return out;
+  const gm = new Map(), im = new Map();
+  for (const g of (Array.isArray(d.groups) ? d.groups : [])) { const n = normGroup(g); if (n) gm.set(n.id, n); }
+  for (const i of (Array.isArray(d.items) ? d.items : [])) { const n = normItem(i); if (n) im.set(n.id, n); }
+  out.groups = [...gm.values()]; out.items = [...im.values()];
+  if (d.tomb && typeof d.tomb === 'object') for (const [k, v] of Object.entries(d.tomb)) if (okId(k) && +v > 0) out.tomb[k] = +v;
+  return out;
+}
+/* Merge another copy into local: newest version of each record wins, deletions travel as tombstones */
+function mergeData(local, inc) {
+  const res = { added: 0, updated: 0, removed: 0, groups: 0 };
+  const tomb = Object.assign({}, local.tomb);
+  for (const [id, ts] of Object.entries(inc.tomb)) if (!(tomb[id] >= ts)) tomb[id] = ts;
+  const gmap = new Map(local.groups.map(g => [g.id, g]));
+  const remap = {};
+  for (const g of inc.groups) {
+    if (tomb[g.id] >= g.updatedAt) continue;
+    const ex = gmap.get(g.id);
+    if (ex) { if (g.updatedAt > ex.updatedAt) gmap.set(g.id, { ...g }); continue; }
+    const same = [...gmap.values()].find(x => x.name.toLowerCase() === g.name.toLowerCase());
+    if (same) { remap[g.id] = same.id; continue; }
+    gmap.set(g.id, { ...g }); res.groups++;
+  }
+  for (const [id, g] of gmap) if (tomb[id] >= g.updatedAt) gmap.delete(id);
+  const imap = new Map(local.items.map(i => [i.id, i]));
+  for (const src of inc.items) {
+    const it = { ...src }; if (remap[it.groupId]) it.groupId = remap[it.groupId];
+    if (tomb[it.id] >= it.updatedAt) continue;
+    const ex = imap.get(it.id);
+    if (!ex) { imap.set(it.id, it); res.added++; }
+    else if (it.updatedAt > ex.updatedAt) { imap.set(it.id, it); res.updated++; }
+  }
+  for (const [id, it] of imap) if (tomb[id] >= it.updatedAt) { imap.delete(id); res.removed++; }
+  for (const it of imap.values()) if (it.groupId && !gmap.has(it.groupId)) it.groupId = null;
+  local.groups = [...gmap.values()]; local.items = [...imap.values()]; local.tomb = tomb;
+  return res;
+}
+function canon(d) {
+  const by = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  return JSON.stringify([d.groups.map(normGroup).sort(by), d.items.map(normItem).sort(by), Object.keys(d.tomb).sort().map(k => [k, d.tomb[k]])]);
+}
+const changed = r => !!r && (r.added || r.updated || r.removed || r.groups);
+
+/* ---------- password tools ---------- */
+const SETS = { lower: 'abcdefghijklmnopqrstuvwxyz', upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', digits: '0123456789', symbols: '!@#$%^&*()-_=+[]{};:,.?/~' };
+function genPassword(o) {
+  let sets = [];
+  for (const k of ['lower', 'upper', 'digits', 'symbols']) if (o[k]) { let s = SETS[k]; if (o.noAmbig) s = s.replace(/[Il1O0o]/g, ''); sets.push(s); }
+  if (!sets.length) sets = [SETS.lower];
+  const all = sets.join(''), len = Math.max(o.length, sets.length);
+  const chars = sets.map(s => s[randInt(s.length)]);
+  while (chars.length < len) chars.push(all[randInt(all.length)]);
+  for (let i = chars.length - 1; i > 0; i--) { const j = randInt(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+  return chars.join('');
+}
+function strength(pw) {
+  if (!pw) return { score: 0, label: '' };
+  let pool = 0;
+  if (/[a-z]/.test(pw)) pool += 26; if (/[A-Z]/.test(pw)) pool += 26; if (/[0-9]/.test(pw)) pool += 10;
+  if (/[а-яё]/.test(pw)) pool += 33; if (/[А-ЯЁ]/.test(pw)) pool += 33; if (/[^a-zA-Z0-9а-яёА-ЯЁ]/.test(pw)) pool += 30;
+  const chars = Array.from(pw), len = chars.length;
+  let bits = len * Math.log2(Math.max(pool, 2));
+  if (new Set(chars).size < len / 2) bits *= 0.6;
+  if (/^(.)\1*$/.test(pw)) bits = 2;
+  if (/(1234|2345|qwer|asdf|йцук|password|passw|пароль|admin|0000|1111|abc)/i.test(pw)) bits *= 0.55;
+  const score = bits < 40 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4;
+  return { score, label: ['', 'слабый', 'средний', 'хороший', 'отличный'][score] };
+}
+const setMeter = (el, pw) => { el.dataset.s = pw ? strength(pw).score : 0; };
+
+/* ---------- state ---------- */
+let V = null; // open vault: { key, salt, iter, data, prev:[] }
+const ui = { group: 'all', q: '', selecting: false, sel: new Set() };
+let lastAct = now();
+
+/* ---------- toast & clipboard ---------- */
+let toastT, clipT;
+function toast(msg, kind = '') { const t = $('#toast'); t.textContent = msg; t.className = 'toast ' + kind; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, kind === 'err' ? 4500 : 2800); }
+function legacyCopy(text) {
+  const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove(); return ok;
+}
+function copyText(text, msg, secret) {
+  if (!text) { toast('Поле пустое'); return; }
+  const done = ok => {
+    if (!ok) { showCopyFallback(text); return; }
+    const sec = secret && V ? V.data.settings.clip : 0;
+    toast(msg + (sec ? ` · буфер очистится через ${sec} с` : ''));
+    if (sec) { clearTimeout(clipT); clipT = setTimeout(() => { try { navigator.clipboard.writeText('').catch(() => {}); } catch (e) {} }, sec * 1000); }
+  };
+  try { navigator.clipboard.writeText(text).then(() => done(true), () => done(legacyCopy(text))); }
+  catch (e) { done(legacyCopy(text)); }
+}
+function showCopyFallback(text) {
+  openModal({ title: 'Скопируйте вручную', html: `<p class="txt">Браузер не дал скопировать автоматически. Выделите текст и скопируйте его.</p><textarea id="cf_t" rows="5" class="mono" readonly>${esc(text)}</textarea><div class="actions"><span class="sp"></span><button type="button" class="btn primary" data-close>Готово</button></div>`,
+    onMount(b) { const t = b.querySelector('#cf_t'); setTimeout(() => { t.focus(); t.select(); }, 50); } });
+}
+
+/* ---------- modals ---------- */
+const modals = [];
+function openModal({ title, html, onMount, dismiss = true }) {
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="sheet-h"><h3>${esc(title)}</h3><button type="button" class="icon-btn" data-close aria-label="Закрыть">${ic('x')}</button></div><div class="sheet-b">${html}</div></div>`;
+  $('#modalRoot').appendChild(ov);
+  const m = {
+    el: ov, body: ov.querySelector('.sheet-b'), onClose: null, guard: null, closed: false,
+    close() { if (m.closed) return; m.closed = true; ov.remove(); const i = modals.indexOf(m); if (i >= 0) modals.splice(i, 1); if (m.onClose) m.onClose(); },
+    async requestClose() { if (m.guard && !(await m.guard())) return; m.close(); }
+  };
+  modals.push(m);
+  ov.addEventListener('click', e => { if ((dismiss && e.target === ov) || e.target.closest('[data-close]')) { e.preventDefault(); m.requestClose(); } });
+  bindEye(m.body);
+  if (onMount) onMount(m.body, m);
+  requestAnimationFrame(() => ov.classList.add('in'));
+  const f = ov.querySelector('[autofocus]'); if (f && matchMedia('(pointer:fine)').matches) setTimeout(() => { if (!ov.contains(document.activeElement)) f.focus(); }, 40);
+  return m;
+}
+function closeAllModals() { while (modals.length) modals[modals.length - 1].close(); }
+function confirmDlg({ title, text, ok = 'OK', danger = false, cancel = 'Отмена' }) {
+  return new Promise(res => {
+    let done = false;
+    const m = openModal({ title, html: `<p class="txt">${text}</p><div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>${cancel}</button><button type="button" class="btn ${danger ? 'danger solid' : 'primary'}" data-ok>${ok}</button></div>`,
+      onMount(b, m) { b.querySelector('[data-ok]').onclick = () => { done = true; m.close(); res(true); }; } });
+    m.onClose = () => { if (!done) res(false); };
+  });
+}
+function askPassword({ title, text, adoptOption = false, adoptDefault = false, okLabel = 'Продолжить', verify }) {
+  return new Promise(res => {
+    let done = false;
+    const m = openModal({ title, html: `<p class="txt">${text}</p><div class="fld"><div class="row"><input type="password" id="ap_pw" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Пароль" autofocus><button type="button" class="icon-btn" data-eye></button></div><div class="err" id="ap_err"></div></div>${adoptOption ? `<label class="check"><input type="checkbox" id="ap_adopt" ${adoptDefault ? 'checked' : ''}> Сделать его мастер-паролем на этом устройстве</label><p class="hint">Удобно для синхронизации: когда на всех устройствах один мастер-пароль, файлы открываются без лишних вопросов.</p>` : ''}<div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="ap_ok">${okLabel}</button></div>`,
+      onMount(b, m) {
+        const inp = b.querySelector('#ap_pw'), err = b.querySelector('#ap_err'), ok = b.querySelector('#ap_ok');
+        const go = async () => {
+          if (!inp.value) { inp.focus(); return; }
+          ok.disabled = true; ok.textContent = 'Проверяю…'; err.textContent = '';
+          try { const r = await verify(inp.value, adoptOption ? b.querySelector('#ap_adopt').checked : false); if (r) { done = true; m.close(); res(r); return; } } catch (e) {}
+          err.textContent = 'Неверный пароль'; ok.disabled = false; ok.textContent = okLabel; inp.select();
+        };
+        ok.onclick = go; onEnter(inp, go);
+      } });
+    m.onClose = () => { if (!done) res(null); };
+  });
+}
+function bindEye(root) {
+  root.querySelectorAll('[data-eye]').forEach(b => {
+    const inp = b.closest('.row').querySelector('input');
+    const sync = () => { const shown = inp.type === 'text'; b.innerHTML = ic(shown ? 'eyeOff' : 'eye'); b.setAttribute('aria-label', shown ? 'Скрыть пароль' : 'Показать пароль'); b.title = b.getAttribute('aria-label'); };
+    b.onclick = () => { inp.type = inp.type === 'password' ? 'text' : 'password'; sync(); };
+    sync();
+  });
+}
+const onEnter = (el, fn) => el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); fn(); } });
+
+/* ---------- persistence ---------- */
+let persistQ = Promise.resolve(), fileDirty = false;
+function persistLocal() {
+  const snap = V; if (!snap) return persistQ;
+  persistQ = persistQ.then(async () => {
+    const blob = await Crypto.seal(snap.key, snap.salt, snap.iter, snap.data);
+    if (!store.set(STORE_KEY, JSON.stringify(blob)) && V) renderBanner();
+  }).catch(e => { toast('Не удалось сохранить: ' + e.message, 'err'); });
+  return persistQ;
+}
+function persist() { fileDirty = true; scheduleFileSync(); return persistLocal(); }
+function requestPersistentStorage() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {} }
+function knownKeys() { return V ? [{ key: V.key, salt: V.salt, iter: V.iter }, ...V.prev] : []; }
+function adoptKey(r) { V.prev.unshift({ key: V.key, salt: V.salt, iter: V.iter }); V.key = r.key; V.salt = r.salt; V.iter = r.iter; }
+/* Try keys we already hold; otherwise ask for the file's password */
+async function openBlob(blob, { interactive, adoptDefault = false, text } = {}) {
+  const keys = knownKeys();
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (blob.salt === b64(k.salt) && blob.iter === k.iter) { try { return { data: await Crypto.open(k.key, blob), same: i === 0 }; } catch (e) {} }
+  }
+  if (!interactive) return null;
+  const salt = unb64(blob.salt);
+  return askPassword({ title: 'Пароль от файла', text: text || 'Этот файл зашифрован другим паролем: мастер-паролем устройства, на котором он создан, или отдельным паролем, заданным при отправке.', adoptOption: true, adoptDefault, okLabel: 'Открыть',
+    verify: async (pw, adopt) => { const key = await Crypto.derive(pw, salt, blob.iter); const data = await Crypto.open(key, blob); return { data, key, salt, iter: blob.iter, adopt, same: false }; } });
+}
+
+/* ---------- lock screen ---------- */
+let failCount = 0, waitUntil = 0;
+function showLock() {
+  const has = !!store.get(STORE_KEY);
+  $('#app').hidden = true; $('#lock').hidden = false;
+  $('#createView').hidden = has; $('#unlockView').hidden = !has;
+  $('#demoBtn').hidden = !IN_FRAME;
+  $('#lockSub').textContent = has ? 'Введите мастер-пароль, чтобы открыть пароли' : 'Создайте зашифрованное хранилище паролей';
+  ['#unlockPass', '#newPass', '#newPass2'].forEach(s => { $(s).value = ''; }); $('#unlockErr').textContent = ''; $('#createErr').textContent = '';
+  setMeter($('#newMeter'), '');
+  const f = has ? $('#unlockPass') : $('#newPass');
+  if (matchMedia('(pointer:fine)').matches) setTimeout(() => f.focus(), 60);
+}
+async function onUnlock() {
+  const inp = $('#unlockPass'), err = $('#unlockErr'), btn = $('#unlockBtn'), pw = inp.value;
+  if (!pw) { inp.focus(); return; }
+  const wait = waitUntil - now();
+  if (wait > 0) { err.textContent = `Слишком много попыток. Подождите ${Math.ceil(wait / 1000)} с`; return; }
+  btn.disabled = true; btn.textContent = 'Открываю…'; err.textContent = '';
+  try {
+    const blob = parseBlob(store.get(STORE_KEY)), salt = unb64(blob.salt);
+    const key = await Crypto.derive(pw, salt, blob.iter);
+    let data; try { data = await Crypto.open(key, blob); } catch (e) { throw new Error('bad'); }
+    failCount = 0; inp.value = '';
+    V = { key, salt, iter: blob.iter, data: normData(data), prev: [] };
+    enterApp();
+  } catch (e) {
+    if (e.message === 'bad') { failCount++; if (failCount >= 3) waitUntil = now() + Math.min(30000, 2000 * 2 ** (failCount - 3)); err.textContent = 'Неверный мастер-пароль'; }
+    else err.textContent = 'Хранилище повреждено. Восстановите его из файла копии.';
+    inp.select();
+  } finally { btn.disabled = false; btn.textContent = 'Открыть'; }
+}
+async function createVault(pw, data) {
+  const salt = rand(16), key = await Crypto.derive(pw, salt, KDF_ITER);
+  V = { key, salt, iter: KDF_ITER, data, prev: [] };
+  await persistLocal(); requestPersistentStorage(); enterApp();
+}
+async function onCreate() {
+  const p1 = $('#newPass').value, p2 = $('#newPass2').value, err = $('#createErr'), btn = $('#createBtn');
+  err.textContent = '';
+  if (Array.from(p1).length < 10) { err.textContent = 'Мастер-пароль должен быть не короче 10 символов'; $('#newPass').focus(); return; }
+  if (p1 !== p2) { err.textContent = 'Пароли не совпадают'; $('#newPass2').focus(); return; }
+  if (strength(p1).score < 2 && !(await confirmDlg({ title: 'Слабый мастер-пароль', text: 'Такой пароль проще подобрать, если файл с вашими паролями попадёт к чужому человеку. Лучше придумать фразу из нескольких слов. Всё равно использовать этот?', ok: 'Использовать' }))) return;
+  btn.disabled = true; btn.textContent = 'Создаю…';
+  try { await createVault(p1, emptyData()); toast('Хранилище создано'); }
+  catch (e) { err.textContent = 'Не удалось создать хранилище: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Создать хранилище'; }
+}
+async function onForgot() {
+  const ok = await confirmDlg({ title: 'Забыли мастер-пароль?', text: 'Восстановить его невозможно: он нигде не хранится, а без него данные не расшифровать. Если у вас есть А-ключница на другом устройстве или файл копии, можно стереть хранилище здесь и заново перенести пароли.', ok: 'Стереть хранилище здесь', danger: true });
+  if (!ok) return;
+  const sure = await confirmDlg({ title: 'Точно стереть?', text: 'Все пароли на этом устройстве будут удалены без возможности восстановления.', ok: 'Стереть', danger: true });
+  if (!sure) return;
+  store.del(STORE_KEY); await unlinkSync(true); showLock(); toast('Хранилище на этом устройстве стёрто');
+}
+function openRestore() {
+  openModal({ title: 'Перенос с другого устройства', html: `
+    <ol class="steps">
+      <li>На устройстве, где уже есть пароли, откройте А-ключницу → ${ic('sync')} <b>Синхронизация</b> → «Сохранить файл», «Поделиться» или «Скопировать как текст».</li>
+      <li>Здесь выберите этот файл или вставьте текст.</li>
+      <li>Введите пароль файла. Он станет мастер-паролем на этом устройстве.</li>
+    </ol>
+    <div class="btns"><label class="btn primary" for="r_file">${ic('file')} Выбрать файл…</label><input type="file" id="r_file" class="vh"></div>
+    <div class="file-chosen" id="r_chosen" hidden></div>
+    <div class="fld"><label class="lbl" for="r_text">…или вставьте текст</label><textarea id="r_text" rows="3" class="mono" placeholder="KLUCH1:…" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea></div>
+    <div class="fld"><label class="lbl" for="r_pw">Пароль файла</label><div class="row"><input type="password" id="r_pw" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-eye></button></div></div>
+    <div class="err" id="r_err"></div>
+    <div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="r_ok">Перенести</button></div>`,
+    onMount(b, m) {
+      let fileText = '';
+      const err = b.querySelector('#r_err'), ok = b.querySelector('#r_ok');
+      b.querySelector('#r_file').onchange = async e => { const f = e.target.files[0]; if (!f) return; fileText = await f.text(); const c = b.querySelector('#r_chosen'); c.hidden = false; c.textContent = '✓ Выбран файл: ' + f.name; };
+      const go = async () => {
+        err.textContent = '';
+        const text = fileText || b.querySelector('#r_text').value;
+        if (!text.trim()) { err.textContent = 'Выберите файл или вставьте текст'; return; }
+        let blob; try { blob = parseBlob(text); } catch (e) { err.textContent = 'Это не файл А-ключницы или он повреждён'; return; }
+        const pw = b.querySelector('#r_pw').value; if (!pw) { err.textContent = 'Введите пароль файла'; b.querySelector('#r_pw').focus(); return; }
+        ok.disabled = true; ok.textContent = 'Расшифровываю…';
+        try {
+          const salt = unb64(blob.salt), key = await Crypto.derive(pw, salt, blob.iter);
+          let data; try { data = await Crypto.open(key, blob); } catch (e) { throw new Error('bad'); }
+          const d = normData(data); d.settings = normSettings({ created: now(), lastBackup: now() });
+          V = { key, salt, iter: blob.iter, data: d, prev: [] };
+          await persistLocal(); requestPersistentStorage(); m.close(); enterApp();
+          toast(`Перенесено: ${countLabel(d.items.length)}`);
+        } catch (e) { err.textContent = e.message === 'bad' ? 'Неверный пароль файла' : 'Ошибка: ' + e.message; }
+        finally { ok.disabled = false; ok.textContent = 'Перенести'; }
+      };
+      ok.onclick = go; onEnter(b.querySelector('#r_pw'), go);
+    } });
+}
+async function startDemo() {
+  const t = now(), d = emptyData();
+  d.groups.push({ id: uid(), name: 'Покупки', emoji: '🛒', color: '#d9822b', updatedAt: t });
+  const shop = d.groups[2].id;
+  const g = () => genPassword({ length: 18, lower: true, upper: true, digits: true, symbols: true, noAmbig: true });
+  const add = (groupId, title, username, url, notes = '', fav = false) => d.items.push({ id: uid(), groupId, title, username, password: g(), url, notes, fav, createdAt: t, updatedAt: t });
+  add('work', 'Рабочая почта', 'i.petrov@firma.example', 'mail.firma.example', '', true);
+  add('work', 'Таск-трекер', 'ipetrov', 'tracker.firma.example');
+  add('work', 'VPN офиса', 'petrov', '', 'Сервер: vpn.firma.example');
+  add('work', 'Бухгалтерия', 'petrov.ivan', 'buh.firma.example');
+  add('home', 'Домашний Wi-Fi', '', '', 'Сеть: Petrovy_5G');
+  add('home', 'Интернет-банк', 'ivan.petrov', 'bank.example', 'Кодовое слово: подсолнух', true);
+  add('home', 'Портал госуслуг', '+7 900 000-00-00', 'gosuslugi.ru');
+  add('home', 'Онлайн-кинотеатр', 'petrovy@mail.example', 'kino.example');
+  add(shop, 'Маркетплейс', 'petrovy@mail.example', 'market.example');
+  add(null, 'Старый форум', 'ivanp', 'forum.example');
+  d.settings.lastBackup = t;
+  await createVault('demo-demo-demo', d);
+  toast('Демо открыто. Мастер-пароль: demo-demo-demo');
+}
+
+/* ---------- app shell ---------- */
+function enterApp() {
+  $('#lock').hidden = true; $('#app').hidden = false;
+  ui.group = 'all'; ui.q = ''; ui.selecting = false; ui.sel.clear(); $('#q').value = '';
+  lastAct = now(); render();
+  if (syncHandle) syncFileNow(false);
+}
+function lock() {
+  if (!V) return;
+  V = null; closeAllModals(); clearTimeout(fileSyncT);
+  $('#list').innerHTML = ''; $('#groups').innerHTML = ''; $('#banner').innerHTML = ''; $('#q').value = '';
+  ui.sel.clear(); ui.selecting = false; $('#selbar').hidden = true;
+  showLock();
+}
+function checkIdle() { if (V && now() - lastAct > V.data.settings.autolock * 60000) lock(); }
+const groupById = id => (V && id && V.data.groups.find(g => g.id === id)) || null;
+const sortedGroups = () => [...V.data.groups].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+const realGroup = id => groupById(id) ? id : null;
+
+function render() { if (!V) return; renderGroups(); renderList(); renderBanner(); updateSyncDot(); }
+function renderGroups() {
+  const c = { all: V.data.items.length, fav: 0, none: 0 };
+  for (const it of V.data.items) { if (it.fav) c.fav++; if (it.groupId && groupById(it.groupId)) c[it.groupId] = (c[it.groupId] || 0) + 1; else c.none++; }
+  const chip = (id, icon, name, n, color) => `<button type="button" class="gchip ${ui.group === id && !ui.q ? 'on' : ''}" data-g="${id}" ${color ? `style="--gc:${color}"` : ''}><span class="ge">${icon}</span><span class="gn">${esc(name)}</span><span class="gc">${n}</span></button>`;
+  let h = chip('all', ic('grid'), 'Все', c.all) + chip('fav', ic('star'), 'Избранное', c.fav, 'var(--brass)');
+  h += '<div class="gsep">Группы</div>';
+  for (const g of sortedGroups()) h += chip(g.id, esc(g.emoji), g.name, c[g.id] || 0, g.color);
+  if (c.none) h += chip('none', ic('inbox'), 'Без группы', c.none);
+  h += `<button type="button" class="gchip add" id="addGroupBtn"><span class="ge">${ic('plus')}</span><span class="gn">Новая группа</span></button>`;
+  $('#groups').innerHTML = h;
+}
+function filteredItems() {
+  const words = ui.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const items = V.data.items.filter(it => {
+    if (words.length) { const hay = (it.title + ' ' + it.username + ' ' + it.url + ' ' + it.notes).toLowerCase(); return words.every(w => hay.includes(w)); }
+    if (ui.group === 'all') return true;
+    if (ui.group === 'fav') return it.fav;
+    if (ui.group === 'none') return !groupById(it.groupId);
+    return it.groupId === ui.group;
+  });
+  return items.sort((a, b) => (b.fav - a.fav) || a.title.localeCompare(b.title, 'ru', { sensitivity: 'base' }));
+}
+function renderList() {
+  const q = ui.q.trim();
+  let title, icon = '', g = null;
+  if (q) title = 'Результаты поиска';
+  else if (ui.group === 'all') title = 'Все записи';
+  else if (ui.group === 'fav') title = 'Избранное';
+  else if (ui.group === 'none') title = 'Без группы';
+  else { g = groupById(ui.group); if (!g) { ui.group = 'all'; return renderList(); } title = g.name; icon = esc(g.emoji); }
+  const items = filteredItems();
+  $('#listTitle').innerHTML = (icon ? `<span>${icon}</span>` : '') + `<span class="ttl">${esc(title)}</span>`;
+  $('#listCount').textContent = items.length ? countLabel(items.length) : '';
+  $('#groupMenuBtn').hidden = !g || !!q || ui.selecting;
+  $('#selectBtn').hidden = !V.data.items.length;
+  $('#selectBtn').textContent = ui.selecting ? 'Готово' : 'Выбрать';
+  $('#fab').hidden = ui.selecting;
+  const list = $('#list');
+  if (!items.length) list.innerHTML = emptyState(q, g);
+  else { const badge = ui.group === 'all' || ui.group === 'fav' || !!q; list.innerHTML = items.map(it => itemRow(it, badge)).join(''); }
+  updateSelbar();
+}
+function itemRow(it, showBadge) {
+  const g = groupById(it.groupId), sel = ui.sel.has(it.id);
+  const sub = [it.username, domainOf(it.url)].filter(Boolean).join(' · ') || (it.notes ? 'заметка' : '—');
+  return `<div class="item${sel ? ' sel' : ''}" data-id="${it.id}" role="button" tabindex="0" aria-label="${esc(it.title)}">`
+    + (ui.selecting ? `<span class="chk">${sel ? ic('check') : ''}</span>` : '')
+    + `<span class="av" style="background:${g ? g.color : hashColor(it.title)}">${esc(firstLetter(it.title))}</span>`
+    + `<span class="meta"><span class="t">${esc(it.title)}${it.fav ? ' <span class="star" title="Избранное">★</span>' : ''}</span><span class="s">${esc(sub)}</span></span>`
+    + (showBadge && g ? `<span class="badge">${esc(g.emoji)} ${esc(g.name)}</span>` : '')
+    + (ui.selecting ? '' : `<span class="acts"><button type="button" class="icon-btn" data-act="user" title="Копировать логин" aria-label="Копировать логин"${it.username ? '' : ' aria-disabled="true"'}>${ic('user')}</button><button type="button" class="icon-btn" data-act="pass" title="Копировать пароль" aria-label="Копировать пароль"${it.password ? '' : ' aria-disabled="true"'}>${ic('key')}</button></span>`)
+    + '</div>';
+}
+function emptyState(q, g) {
+  if (q) return `<div class="empty"><p>Ничего не нашлось по запросу «${esc(q)}».</p></div>`;
+  if (!V.data.items.length) return `<div class="empty"><div class="empty-ic">${ic('key')}</div><h3>Здесь пока пусто</h3><p>Добавьте первую запись, импортируйте пароли из браузера или перенесите их с другого устройства.</p><div class="btns center"><button type="button" class="btn primary" data-empty="add">${ic('plus')} Добавить запись</button><button type="button" class="btn" data-empty="sync">${ic('sync')} С другого устройства</button><button type="button" class="btn" data-empty="csv">${ic('upload')} Импорт из браузера</button></div></div>`;
+  if (g) return `<div class="empty"><p>В группе «${esc(g.name)}» пока нет записей.</p><div class="btns center"><button type="button" class="btn primary" data-empty="add">${ic('plus')} Добавить в эту группу</button><button type="button" class="btn" data-empty="pick">${ic('folder')} Перенести сюда записи</button></div></div>`;
+  return `<div class="empty"><p>${ui.group === 'fav' ? 'Отметьте важные записи звёздочкой, и они появятся здесь.' : 'Нет записей.'}</p></div>`;
+}
+function renderBanner() {
+  if (!V) return;
+  const s = V.data.settings; let h = '';
+  if (IN_FRAME) h = `<div class="banner">${ic('info')}<span><b>Демо-версия в окне Claude.</b> Здесь можно всё попробовать, но данные могут не сохраниться, а файлы не скачиваются. Для настоящих паролей установите А-ключницу на телефон и компьютер.</span></div>`;
+  else if (store.broken) h = `<div class="banner err">${ic('info')}<span>Браузер не даёт сохранять данные (возможно, включён приватный режим). Изменения пропадут после закрытия: сохраните копию через «Синхронизацию».</span></div>`;
+  else if (V.data.items.length >= 3 && now() - Math.max(s.lastBackup, s.created) > 14 * DAY && !(syncHandle && syncState.status === 'ok'))
+    h = `<div class="banner">${ic('info')}<span>Давно не было резервной копии. Сохраните зашифрованный файл в облако или на другое устройство, чтобы пароли не пропали, если телефон потеряется или браузер очистит данные.</span><button type="button" class="btn sm" data-banner="sync">Сделать копию</button></div>`;
+  $('#banner').innerHTML = h;
+}
+function updateSelbar() {
+  const bar = $('#selbar'); bar.hidden = !ui.selecting; if (!ui.selecting) return;
+  const n = ui.sel.size; $('#selCount').textContent = `Выбрано: ${n}`;
+  $('#selMove').disabled = $('#selDel').disabled = !n;
+}
+
+/* ---------- entry editor ---------- */
+function groupOptions(sel) {
+  return `<option value="">Без группы</option>` + sortedGroups().map(g => `<option value="${g.id}"${g.id === sel ? ' selected' : ''}>${esc(g.emoji)} ${esc(g.name)}</option>`).join('') + `<option value="__new">＋ Новая группа…</option>`;
+}
+function pwHint(pw, selfId) {
+  if (!pw) return '';
+  const s = strength(pw), reuse = V.data.items.filter(i => i.id !== selfId && i.password === pw).length;
+  return `Надёжность: ${s.label}` + (reuse ? ` · этот пароль уже используется ещё в ${reuse} ${plural(reuse, 'записи', 'записях', 'записях')}` : '');
+}
+function openEditor(item) {
+  const isNew = !item;
+  const it = item ? { ...item } : { id: uid(), groupId: realGroup(ui.group), title: '', username: '', password: '', url: '', notes: '', fav: ui.group === 'fav', createdAt: 0, updatedAt: 0 };
+  const m = openModal({ title: isNew ? 'Новая запись' : it.title, dismiss: false, html: `
+    <div class="fld"><label class="lbl" for="f_title">Название</label><input id="f_title" maxlength="200" placeholder="Например: Почта, Банк, Wi-Fi" value="${esc(it.title)}" autocomplete="off"${isNew ? ' autofocus' : ''}></div>
+    <div class="fld"><label class="lbl" for="f_group">Группа</label><select id="f_group">${groupOptions(it.groupId)}</select></div>
+    <div class="fld"><label class="lbl" for="f_user">Логин, e-mail или телефон</label><div class="row"><input id="f_user" value="${esc(it.username)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-copy="f_user" title="Копировать логин" aria-label="Копировать логин">${ic('copy')}</button></div></div>
+    <div class="fld"><label class="lbl" for="f_pass">Пароль</label><div class="row"><input id="f_pass" type="password" class="mono" value="${esc(it.password)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-eye></button><button type="button" class="icon-btn" data-gen title="Сгенерировать пароль" aria-label="Сгенерировать пароль">${ic('dice')}</button><button type="button" class="icon-btn" data-copy="f_pass" title="Копировать пароль" aria-label="Копировать пароль">${ic('copy')}</button></div><div class="meter" id="f_meter"><i></i><i></i><i></i><i></i></div><p class="hint" id="f_phint"></p></div>
+    <div class="fld"><label class="lbl" for="f_url">Сайт</label><div class="row"><input id="f_url" value="${esc(it.url)}" inputmode="url" placeholder="example.ru" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><a class="icon-btn" id="f_open" target="_blank" rel="noopener noreferrer" title="Открыть сайт" aria-label="Открыть сайт">${ic('external')}</a></div></div>
+    <div class="fld"><label class="lbl" for="f_notes">Заметки</label><textarea id="f_notes" rows="3" placeholder="PIN-код, секретный вопрос, коды восстановления…">${esc(it.notes)}</textarea></div>
+    <label class="check"><input type="checkbox" id="f_fav"${it.fav ? ' checked' : ''}> В избранное</label>
+    ${isNew ? '' : `<p class="hint">Создано ${fmtDate(it.createdAt)} · изменено ${fmtDate(it.updatedAt)}</p>`}
+    <div class="err" id="f_err"></div>
+    <div class="actions">${isNew ? '' : `<button type="button" class="btn ghost danger" id="f_del">${ic('trash')} Удалить</button><button type="button" class="btn ghost" id="f_dup">${ic('copy')} Копия</button>`}<span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="f_save">Сохранить</button></div>`,
+    onMount(b, m) {
+      const F = id => b.querySelector('#' + id);
+      const read = () => ({ title: F('f_title').value.trim(), groupId: F('f_group').value || null, username: F('f_user').value.trim(), password: F('f_pass').value, url: F('f_url').value.trim(), notes: F('f_notes').value, fav: F('f_fav').checked });
+      const initial = JSON.stringify(read());
+      const upd = () => { const pw = F('f_pass').value; setMeter(F('f_meter'), pw); F('f_phint').textContent = pwHint(pw, it.id); const u = normUrl(F('f_url').value); const a = F('f_open'); if (u) { a.href = u; a.removeAttribute('aria-disabled'); } else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); } };
+      F('f_pass').addEventListener('input', upd); F('f_url').addEventListener('input', upd); upd();
+      b.querySelectorAll('[data-copy]').forEach(btn => btn.onclick = () => { const isPw = btn.dataset.copy === 'f_pass'; copyText(F(btn.dataset.copy).value, isPw ? 'Пароль скопирован' : 'Логин скопирован', isPw); });
+      b.querySelector('[data-gen]').onclick = () => openGenerator(pw => { F('f_pass').value = pw; F('f_pass').type = 'text'; bindEye(b); upd(); });
+      let prevGroup = F('f_group').value;
+      F('f_group').onchange = () => {
+        const sel = F('f_group');
+        if (sel.value !== '__new') { prevGroup = sel.value; return; }
+        sel.value = prevGroup;
+        openGroupEditor(null, g => { sel.innerHTML = groupOptions(g.id); prevGroup = g.id; renderGroups(); });
+      };
+      m.guard = async () => JSON.stringify(read()) === initial || await confirmDlg({ title: 'Закрыть без сохранения?', text: 'Изменения в записи будут потеряны.', ok: 'Не сохранять', danger: true });
+      const save = async () => {
+        const v = read();
+        if (!v.title) v.title = domainOf(v.url) || v.username;
+        if (!v.title) { F('f_err').textContent = 'Укажите название записи'; F('f_title').focus(); return; }
+        const t = now();
+        const rec = normItem({ ...it, ...v, groupId: realGroup(v.groupId), createdAt: it.createdAt || t, updatedAt: t });
+        const idx = V.data.items.findIndex(x => x.id === rec.id);
+        if (idx >= 0) V.data.items[idx] = rec; else V.data.items.push(rec);
+        delete V.data.tomb[rec.id];
+        await persist(); m.close(); render(); toast(isNew ? 'Запись добавлена' : 'Сохранено');
+      };
+      F('f_save').onclick = save;
+      ['f_title', 'f_user', 'f_pass', 'f_url'].forEach(id => onEnter(F(id), save));
+      if (!isNew) {
+        F('f_del').onclick = async () => { if (await confirmDlg({ title: 'Удалить запись?', text: `«${esc(it.title)}» будет удалена на всех устройствах после синхронизации.`, ok: 'Удалить', danger: true })) { deleteItems([it.id]); m.close(); toast('Запись удалена'); } };
+        F('f_dup').onclick = async () => {
+          const t = now(), v = read();
+          const copy = normItem({ ...it, ...v, groupId: realGroup(v.groupId), id: uid(), title: (v.title || it.title) + ' (копия)', createdAt: t, updatedAt: t });
+          V.data.items.push(copy); await persist(); m.close(); render(); openEditor(copy); toast('Создана копия — выберите для неё группу');
+        };
+      }
+    } });
+  return m;
+}
+function deleteItems(ids) {
+  const t = now(), set = new Set(ids);
+  V.data.items = V.data.items.filter(i => !set.has(i.id));
+  for (const id of ids) V.data.tomb[id] = t;
+  ui.sel.clear(); persist(); render();
+}
+
+/* ---------- groups ---------- */
+function openGroupEditor(g, onDone) {
+  const isNew = !g, n = V.data.groups.length;
+  const st = { name: g ? g.name : '', emoji: g ? g.emoji : EMOJIS[(n + 2) % EMOJIS.length], color: g ? g.color : PALETTE[n % PALETTE.length] };
+  openModal({ title: isNew ? 'Новая группа' : 'Изменить группу', html: `
+    <div class="fld"><label class="lbl" for="g_name">Название</label><input id="g_name" maxlength="60" value="${esc(st.name)}" placeholder="Например: Для работы, Семья, Финансы" autocomplete="off" autofocus></div>
+    <div class="fld"><span class="lbl">Значок</span><div class="emoji-grid" id="g_emoji">${EMOJIS.map(e => `<button type="button" data-e="${e}" class="${e === st.emoji ? 'on' : ''}" aria-label="Значок ${e}">${e}</button>`).join('')}</div></div>
+    <div class="fld"><span class="lbl">Цвет</span><div class="swatches" id="g_color">${PALETTE.map(c => `<button type="button" data-c="${c}" class="${c === st.color ? 'on' : ''}" style="background:${c}" aria-label="Цвет ${c}"></button>`).join('')}</div></div>
+    <div class="gprev" id="g_prev"></div>
+    <div class="err" id="g_err"></div>
+    <div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="g_save">${isNew ? 'Создать группу' : 'Сохранить'}</button></div>`,
+    onMount(b, m) {
+      const prev = () => { b.querySelector('#g_prev').innerHTML = `<span class="ge" style="--gc:${st.color}">${esc(st.emoji)}</span><span>${esc(b.querySelector('#g_name').value.trim() || 'Название группы')}</span>`; };
+      b.querySelector('#g_emoji').onclick = e => { const x = e.target.closest('[data-e]'); if (!x) return; st.emoji = x.dataset.e; $$('#g_emoji button', b).forEach(y => y.classList.toggle('on', y === x)); prev(); };
+      b.querySelector('#g_color').onclick = e => { const x = e.target.closest('[data-c]'); if (!x) return; st.color = x.dataset.c; $$('#g_color button', b).forEach(y => y.classList.toggle('on', y === x)); prev(); };
+      b.querySelector('#g_name').addEventListener('input', prev); prev();
+      const save = () => {
+        const name = b.querySelector('#g_name').value.trim();
+        if (!name) { b.querySelector('#g_err').textContent = 'Введите название группы'; return; }
+        if (V.data.groups.some(x => x.name.toLowerCase() === name.toLowerCase() && (!g || x.id !== g.id))) { b.querySelector('#g_err').textContent = 'Группа с таким названием уже есть'; return; }
+        let rec;
+        if (isNew) { rec = { id: uid(), name, emoji: st.emoji, color: st.color, updatedAt: now() }; V.data.groups.push(rec); }
+        else { rec = groupById(g.id); Object.assign(rec, { name, emoji: st.emoji, color: st.color, updatedAt: now() }); }
+        persist(); m.close(); render(); toast(isNew ? `Группа «${name}» создана` : 'Группа сохранена');
+        if (onDone) onDone(rec);
+      };
+      b.querySelector('#g_save').onclick = save; onEnter(b.querySelector('#g_name'), save);
+    } });
+}
+function openGroupMenu(g) {
+  openModal({ title: `${g.emoji} ${g.name}`, html: `<div class="menu-list">
+      <button type="button" data-a="add">${ic('plus')} Добавить запись в группу</button>
+      <button type="button" data-a="pick">${ic('folder')} Перенести сюда записи</button>
+      <button type="button" data-a="edit">${ic('edit')} Переименовать, сменить значок и цвет</button>
+      <button type="button" data-a="send">${ic('share')} Отправить только эту группу на другое устройство</button>
+      <button type="button" data-a="del" class="danger">${ic('trash')} Удалить группу</button></div>`,
+    onMount(b, m) { b.onclick = e => { const x = e.target.closest('[data-a]'); if (!x) return; m.close(); const a = x.dataset.a;
+      if (a === 'edit') openGroupEditor(g); else if (a === 'add') openEditor(null); else if (a === 'pick') startPicking(); else if (a === 'send') openSync({ groupId: g.id }); else if (a === 'del') openGroupDelete(g); }; } });
+}
+function startPicking() {
+  // switch to "all" in selection mode; the group we came from becomes the move target suggestion
+  ui.pickTarget = realGroup(ui.group); ui.group = 'all'; ui.selecting = true; ui.sel.clear(); render();
+  toast('Отметьте записи и нажмите «В группу»');
+}
+function openGroupDelete(g) {
+  const items = V.data.items.filter(i => i.groupId === g.id), n = items.length;
+  openModal({ title: 'Удалить группу', html: `<p class="txt">Группа «${esc(g.name)}» будет удалена${n ? `. В ней ${countLabel(n)}.` : '.'}</p>${n ? `<label class="check"><input type="radio" name="gd" value="keep" checked> Оставить записи (они попадут в «Без группы»)</label><label class="check"><input type="radio" name="gd" value="drop"> Удалить вместе с записями</label>` : ''}<div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn danger solid" id="gd_ok">Удалить группу</button></div>`,
+    onMount(b, m) { b.querySelector('#gd_ok').onclick = () => {
+      const drop = n && b.querySelector('input[name=gd]:checked').value === 'drop', t = now();
+      if (drop) { for (const it of items) V.data.tomb[it.id] = t; V.data.items = V.data.items.filter(i => i.groupId !== g.id); }
+      else for (const it of items) { it.groupId = null; it.updatedAt = t; }
+      V.data.groups = V.data.groups.filter(x => x.id !== g.id); V.data.tomb[g.id] = t;
+      if (ui.group === g.id) ui.group = 'all';
+      persist(); m.close(); render(); toast('Группа удалена');
+    }; } });
+}
+function openMoveTo(ids) {
+  const target = ui.pickTarget;
+  openModal({ title: `Переместить ${countLabel(ids.length)}`, html: `<div class="menu-list">${sortedGroups().map(g => `<button type="button" data-g="${g.id}"><span class="ge" style="--gc:${g.color}">${esc(g.emoji)}</span> ${esc(g.name)}${g.id === target ? ' <span class="muted">· откуда вы пришли</span>' : ''}</button>`).join('')}<button type="button" data-g=""><span class="ge">${ic('inbox')}</span> Без группы</button><button type="button" data-g="__new"><span class="ge">${ic('plus')}</span> Новая группа…</button></div>`,
+    onMount(b, m) { b.onclick = e => {
+      const x = e.target.closest('[data-g]'); if (!x) return; m.close();
+      const apply = gid => { const t = now(), set = new Set(ids); for (const it of V.data.items) if (set.has(it.id)) { it.groupId = gid; it.updatedAt = t; }
+        ui.selecting = false; ui.sel.clear(); ui.pickTarget = null; if (gid) ui.group = gid; persist(); render();
+        const g = groupById(gid); toast(`Перемещено в «${g ? g.name : 'Без группы'}»`); };
+      if (x.dataset.g === '__new') openGroupEditor(null, g => apply(g.id)); else apply(x.dataset.g || null);
+    }; } });
+}
+
+/* ---------- generator ---------- */
+function genOpts() { return Object.assign({ length: 20, lower: true, upper: true, digits: true, symbols: true, noAmbig: true }, (V && V.data.settings.gen) || {}); }
+function pwHtml(pw) { return Array.from(pw).map(c => /[0-9]/.test(c) ? `<span class="cd">${c}</span>` : /[A-Za-z]/.test(c) ? c : `<span class="cs">${esc(c)}</span>`).join(''); }
+function openGenerator(onUse) {
+  const o = genOpts();
+  const cb = (id, label, on) => `<label class="check"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${label}</label>`;
+  openModal({ title: 'Генератор паролей', html: `
+    <div class="gen-out" id="g_out" aria-live="polite"></div>
+    <div class="meter" id="g_meter"><i></i><i></i><i></i><i></i></div>
+    <div class="fld"><label class="lbl" for="g_len">Длина: <b id="g_lenv">${o.length}</b> символов</label><input type="range" id="g_len" min="8" max="64" value="${o.length}"></div>
+    <div class="opts">${cb('g_upper', 'Заглавные буквы A–Z', o.upper)}${cb('g_lower', 'Строчные буквы a–z', o.lower)}${cb('g_digits', 'Цифры 0–9', o.digits)}${cb('g_symbols', 'Символы !@#$%', o.symbols)}${cb('g_amb', 'Без похожих символов (l, I, 1, O, 0)', o.noAmbig)}</div>
+    <div class="actions"><button type="button" class="btn" id="g_re">${ic('refresh')} Другой</button><span class="sp"></span><button type="button" class="btn${onUse ? '' : ' primary'}" id="g_copy">${ic('copy')} Копировать</button>${onUse ? '<button type="button" class="btn primary" id="g_use">Подставить</button>' : ''}</div>`,
+    onMount(b, m) {
+      let cur = '', dirty = false;
+      const read = () => ({ length: +b.querySelector('#g_len').value, upper: b.querySelector('#g_upper').checked, lower: b.querySelector('#g_lower').checked, digits: b.querySelector('#g_digits').checked, symbols: b.querySelector('#g_symbols').checked, noAmbig: b.querySelector('#g_amb').checked });
+      const gen = () => { const oo = read(); b.querySelector('#g_lenv').textContent = oo.length; cur = genPassword(oo); b.querySelector('#g_out').innerHTML = pwHtml(cur); setMeter(b.querySelector('#g_meter'), cur); };
+      b.addEventListener('input', e => { if (e.target.matches('input')) { dirty = true; gen(); } });
+      b.querySelector('#g_re').onclick = gen;
+      b.querySelector('#g_copy').onclick = () => copyText(cur, 'Пароль скопирован', true);
+      if (onUse) b.querySelector('#g_use').onclick = () => { onUse(cur); m.close(); };
+      gen();
+      m.onClose = () => { if (dirty && V) { V.data.settings.gen = read(); persistLocal(); } };
+    } });
+}
+
+/* ---------- settings ---------- */
+function openSettings() {
+  const s = V.data.settings;
+  const opt = (v, cur, label) => `<option value="${v}"${v === cur ? ' selected' : ''}>${label}</option>`;
+  openModal({ title: 'Настройки', html: `
+    <div class="sec"><h4>${ic('lock')} Безопасность</h4>
+      <div class="fld"><label class="lbl" for="s_lock">Блокировать при бездействии</label><select id="s_lock">${[1, 5, 15, 30, 60].map(v => opt(v, s.autolock, `через ${v} мин`)).join('')}</select></div>
+      <div class="fld"><label class="lbl" for="s_clip">Очищать буфер обмена после копирования пароля</label><select id="s_clip">${[[15, 'через 15 секунд'], [30, 'через 30 секунд'], [60, 'через 1 минуту'], [120, 'через 2 минуты'], [0, 'не очищать']].map(([v, l]) => opt(v, s.clip, l)).join('')}</select></div>
+      <div class="btns"><button type="button" class="btn" id="s_chpw">${ic('key')} Сменить мастер-пароль</button></div>
+    </div>
+    <div class="sec"><h4>${ic('upload')} Импорт и экспорт</h4><p>Перенос паролей из Chrome, Edge, Firefox, Safari, Bitwarden, KeePass и других менеджеров через файл CSV.</p>
+      <div class="btns"><button type="button" class="btn" id="s_csvin">Импорт из CSV</button>${CAN_DOWNLOAD ? '<button type="button" class="btn" id="s_csvout">Экспорт в CSV</button>' : ''}</div></div>
+    <div class="sec"><h4>${ic('shield')} Как защищены данные</h4>
+      <p>Всё шифруется на устройстве алгоритмом AES-256-GCM. Ключ вычисляется из мастер-пароля (PBKDF2-SHA-256, ${V.iter.toLocaleString('ru-RU')} итераций) и живёт только в памяти, пока хранилище открыто. А-ключница ничего не отправляет в интернет: нет серверов, аккаунтов и аналитики.</p>
+      <div class="kv"><span>Записей</span><b>${V.data.items.length}</b><span>Групп</span><b>${V.data.groups.length}</b><span>Последняя копия</span><b>${s.lastBackup ? fmtDate(s.lastBackup) : 'не делалась'}</b></div></div>
+    <div class="sec"><h4>${ic('trash')} Удаление</h4><p>Стирает хранилище только на этом устройстве. Копии на других устройствах и в файлах останутся.</p>
+      <div class="btns"><button type="button" class="btn danger" id="s_wipe">Стереть данные на этом устройстве</button></div></div>`,
+    onMount(b, m) {
+      b.querySelector('#s_lock').onchange = e => { s.autolock = +e.target.value; persistLocal(); toast('Сохранено'); };
+      b.querySelector('#s_clip').onchange = e => { s.clip = +e.target.value; persistLocal(); toast('Сохранено'); };
+      b.querySelector('#s_chpw').onclick = () => openChangeMaster();
+      b.querySelector('#s_csvin').onclick = () => openCsvImport();
+      const out = b.querySelector('#s_csvout'); if (out) out.onclick = exportCsv;
+      b.querySelector('#s_wipe').onclick = async () => {
+        if (!(await confirmDlg({ title: 'Стереть все данные?', text: 'Все записи и группы будут удалены с этого устройства. Это нельзя отменить. Убедитесь, что у вас есть копия на другом устройстве или в файле.', ok: 'Стереть', danger: true }))) return;
+        store.del(STORE_KEY); await unlinkSync(true); V = null; closeAllModals(); showLock(); toast('Данные на этом устройстве удалены');
+      };
+    } });
+}
+function openChangeMaster() {
+  openModal({ title: 'Смена мастер-пароля', html: `
+    <div class="fld"><label class="lbl" for="c_old">Текущий мастер-пароль</label><div class="row"><input type="password" id="c_old" autocomplete="off" autofocus><button type="button" class="icon-btn" data-eye></button></div></div>
+    <div class="fld"><label class="lbl" for="c_new">Новый мастер-пароль</label><div class="row"><input type="password" id="c_new" autocomplete="off"><button type="button" class="icon-btn" data-eye></button></div><div class="meter" id="c_meter"><i></i><i></i><i></i><i></i></div><p class="hint">Не короче 10 символов.</p></div>
+    <div class="fld"><label class="lbl" for="c_new2">Повторите новый</label><input type="password" id="c_new2" autocomplete="off"></div>
+    <p class="note">На других устройствах пароль останется прежним. При следующей синхронизации они попросят новый пароль и предложат сделать его мастер-паролем.</p>
+    <div class="err" id="c_err"></div>
+    <div class="actions"><span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="c_ok">Сменить</button></div>`,
+    onMount(b, m) {
+      const F = id => b.querySelector('#' + id), err = F('c_err');
+      F('c_new').addEventListener('input', () => setMeter(F('c_meter'), F('c_new').value));
+      F('c_ok').onclick = async () => {
+        err.textContent = '';
+        const o = F('c_old').value, n1 = F('c_new').value, n2 = F('c_new2').value;
+        if (Array.from(n1).length < 10) { err.textContent = 'Новый пароль должен быть не короче 10 символов'; return; }
+        if (n1 !== n2) { err.textContent = 'Новые пароли не совпадают'; return; }
+        F('c_ok').disabled = true; F('c_ok').textContent = 'Меняю…';
+        try {
+          // verify the current password by decrypting the stored vault with it
+          const k = await Crypto.derive(o, V.salt, V.iter);
+          const blob = parseBlob(store.get(STORE_KEY));
+          try { await Crypto.open(k, blob); } catch (e) { throw new Error('bad'); }
+          const salt = rand(16), key = await Crypto.derive(n1, salt, KDF_ITER);
+          adoptKey({ key, salt, iter: KDF_ITER });
+          fileDirty = true; await persistLocal(); scheduleFileSync();
+          m.close(); toast('Мастер-пароль изменён');
+        } catch (e) { err.textContent = e.message === 'bad' ? 'Текущий мастер-пароль введён неверно' : 'Ошибка: ' + e.message; }
+        finally { F('c_ok').disabled = false; F('c_ok').textContent = 'Сменить'; }
+      };
+    } });
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/, 1)[0];
+  const d = first.split(';').length > first.split(',').length ? ';' : (first.split('\t').length > first.split(',').length ? '\t' : ',');
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"' && f === '') q = true;
+    else if (c === d) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+const COLS = {
+  title: ['name', 'title', 'account', 'имя', 'название', 'наименование', 'запись'],
+  url: ['url', 'login_uri', 'website', 'web site', 'uri', 'сайт', 'адрес', 'login url', 'origin_url'],
+  username: ['username', 'login_username', 'login', 'user', 'user name', 'email', 'e-mail', 'логин', 'имя пользователя', 'пользователь'],
+  password: ['password', 'login_password', 'пароль'],
+  notes: ['note', 'notes', 'comments', 'comment', 'extra', 'заметки', 'заметка', 'примечание', 'примечания'],
+  group: ['folder', 'group', 'grouping', 'category', 'папка', 'группа', 'категория'],
+  fav: ['favorite', 'fav', 'favourite', 'избранное']
+};
+const sig = i => [i.title, i.username, i.password, i.url].join('\u0001').toLowerCase();
+async function importCsvText(text, targetGroup) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) throw new Error('в файле нет записей');
+  const head = rows[0].map(h => h.trim().toLowerCase()), col = {};
+  for (const [k, names] of Object.entries(COLS)) { const idx = head.findIndex(h => names.includes(h)); if (idx >= 0) col[k] = idx; }
+  if (col.password == null && col.username == null) throw new Error('не нашлись столбцы с логином и паролем. Нужен CSV с заголовками, например name, url, username, password');
+  const t = now(), existing = new Set(V.data.items.map(sig)), byName = new Map(V.data.groups.map(g => [g.name.toLowerCase(), g]));
+  let added = 0, skipped = 0, newGroups = 0;
+  for (const r of rows.slice(1)) {
+    const get = k => col[k] != null ? (r[col[k]] || '').trim() : '';
+    const it = { id: uid(), title: get('title'), username: get('username'), password: col.password != null ? (r[col.password] || '') : '', url: get('url'), notes: get('notes'), fav: /^(1|true|yes|да)$/i.test(get('fav')), groupId: targetGroup, createdAt: t, updatedAt: t };
+    if (!it.username && !it.password && !it.notes) { skipped++; continue; }
+    if (!it.title) it.title = domainOf(it.url) || it.username || 'Без названия';
+    const gname = get('group').split(/[\/\\]/).map(s => s.trim()).filter(Boolean).pop();
+    if (gname) {
+      let g = byName.get(gname.toLowerCase());
+      if (!g) { g = { id: uid(), name: gname.slice(0, 60), emoji: '📁', color: PALETTE[V.data.groups.length % PALETTE.length], updatedAt: t }; V.data.groups.push(g); byName.set(gname.toLowerCase(), g); newGroups++; }
+      it.groupId = g.id;
+    }
+    const n = normItem(it), s = sig(n);
+    if (existing.has(s)) { skipped++; continue; }
+    existing.add(s); V.data.items.push(n); added++;
+  }
+  await persist(); render();
+  return { added, skipped, newGroups };
+}
+function openCsvImport() {
+  openModal({ title: 'Импорт из CSV', html: `
+    <p class="txt">Выгрузите пароли из браузера или другого менеджера в файл CSV и выберите его здесь. Повторы пропускаются.</p>
+    <details class="how"><summary>Где взять CSV?</summary><ul>
+      <li><b>Chrome, Edge, Opera:</b> настройки → Пароли (Менеджер паролей) → «Экспорт паролей».</li>
+      <li><b>Firefox:</b> меню → Пароли → ⋯ → «Экспорт паролей».</li>
+      <li><b>Bitwarden, KeePass, 1Password и другие:</b> «Экспорт» → формат CSV.</li></ul></details>
+    <div class="fld"><label class="lbl" for="i_group">Куда положить записи без папки</label><select id="i_group">${groupOptions(realGroup(ui.group)).replace('<option value="__new">＋ Новая группа…</option>', '')}</select></div>
+    <div class="btns"><label class="btn primary" for="i_file">${ic('file')} Выбрать CSV-файл…</label><input type="file" id="i_file" class="vh" accept=".csv,text/csv,text/plain"></div>
+    <div class="err" id="i_err"></div>
+    <p class="note warn">После импорта удалите CSV-файл: в нём пароли лежат открытым текстом.</p>`,
+    onMount(b, m) {
+      b.querySelector('#i_file').onchange = async e => {
+        const f = e.target.files[0]; if (!f) return;
+        try { const r = await importCsvText(await f.text(), b.querySelector('#i_group').value || null); m.close(); toast(`Импортировано: ${countLabel(r.added)}${r.skipped ? `, пропущено повторов и пустых: ${r.skipped}` : ''}${r.newGroups ? `, новых групп: ${r.newGroups}` : ''}`); }
+        catch (err) { b.querySelector('#i_err').textContent = 'Не получилось: ' + err.message; }
+        e.target.value = '';
+      };
+    } });
+}
+async function exportCsv() {
+  if (!(await confirmDlg({ title: 'Экспорт в CSV', text: 'CSV-файл <b>не зашифрован</b>: любой, кто его откроет, увидит все пароли. Используйте его только для переноса в другой менеджер паролей и сразу удалите. Для своих устройств используйте «Синхронизацию» — там файл зашифрован.', ok: 'Скачать CSV' }))) return;
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [['name', 'url', 'username', 'password', 'note', 'folder'].join(',')];
+  for (const it of V.data.items) { const g = groupById(it.groupId); lines.push([it.title, normUrl(it.url) || it.url, it.username, it.password, it.notes, g ? g.name : ''].map(q).join(',')); }
+  download(`${FILE_BASE}-${dateStamp()}.csv`, '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+}
+function download(name, text, type = 'application/octet-stream') {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
+}
+
+/* ---------- sync & transfer ---------- */
+function exportData(scope) {
+  const d = V.data;
+  if (!scope || scope === 'all') return { v: 1, groups: d.groups, items: d.items, tomb: d.tomb, exportedAt: now() };
+  return { v: 1, groups: d.groups.filter(g => g.id === scope), items: d.items.filter(i => i.groupId === scope), tomb: d.tomb, partial: true, exportedAt: now() };
+}
+function markBackup(scope) { if (scope === 'all' && V) { V.data.settings.lastBackup = now(); persistLocal(); renderBanner(); } }
+function showMergeResult(r) {
+  if (!changed(r)) { toast('Всё уже совпадает: новых изменений нет'); return; }
+  const p = [];
+  if (r.added) p.push(`новых записей: ${r.added}`); if (r.updated) p.push(`обновлено: ${r.updated}`);
+  if (r.removed) p.push(`удалено: ${r.removed}`); if (r.groups) p.push(`новых групп: ${r.groups}`);
+  toast('Синхронизировано · ' + p.join(', '));
+}
+async function importText(text) {
+  let blob; try { blob = parseBlob(text); } catch (e) { toast('Это не файл А-ключницы или он повреждён. Проверьте, что выбран нужный файл.', 'err'); return false; }
+  const r = await openBlob(blob, { interactive: true });
+  if (!r || !V) return false;
+  if (r.adopt) adoptKey(r);
+  const res = mergeData(V.data, normData(r.data));
+  await persist(); render(); showMergeResult(res);
+  if (r.adopt) toast('Готово. Теперь мастер-пароль здесь такой же, как в файле');
+  return true;
+}
+function openPaste() {
+  openModal({ title: 'Вставить текст', html: `<p class="txt">Вставьте текст, который начинается с <span class="mono">KLUCH1:</span>. Его создаёт кнопка «Скопировать как текст» на другом устройстве.</p><textarea id="p_t" rows="6" class="mono" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="KLUCH1:…" autofocus></textarea><div class="actions">${IN_FRAME || !navigator.clipboard || !navigator.clipboard.readText ? '' : `<button type="button" class="btn" id="p_clip">${ic('paste')} Из буфера</button>`}<span class="sp"></span><button type="button" class="btn" data-close>Отмена</button><button type="button" class="btn primary" id="p_ok">Получить</button></div>`,
+    onMount(b, m) {
+      const t = b.querySelector('#p_t'), c = b.querySelector('#p_clip');
+      if (c) c.onclick = async () => { try { t.value = await navigator.clipboard.readText(); } catch (e) { toast('Браузер не дал прочитать буфер — вставьте вручную', 'err'); t.focus(); } };
+      b.querySelector('#p_ok').onclick = async () => { if (!t.value.trim()) { t.focus(); return; } if (await importText(t.value)) m.close(); };
+    } });
+}
+
+/* file-based auto sync (Chrome / Edge on a computer) */
+let syncHandle = null, syncing = false, fileSyncT = null, syncPanel = null;
+const syncState = { status: 'off', last: 0, lastMod: 0, err: '' };
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open('kluchnitsa', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function kv(op, k, v) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const st = tx.objectStore('kv'); const r = op === 'get' ? st.get(k) : op === 'set' ? st.put(v, k) : st.delete(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function loadSyncHandle() { if (!CAN_FS) return; try { syncHandle = (await kv('get', 'syncHandle')) || null; if (syncHandle) syncState.status = 'idle'; } catch (e) { syncHandle = null; } }
+async function unlinkSync(silent) { syncHandle = null; syncState.status = 'off'; syncState.last = 0; syncState.lastMod = 0; if (CAN_FS) { try { await kv('del', 'syncHandle'); } catch (e) {} } refreshSyncPanel(); updateSyncDot(); if (!silent) toast('Файл синхронизации отвязан'); }
+function setSyncStatus(s) { syncState.status = s; updateSyncDot(); refreshSyncPanel(); }
+function updateSyncDot() { const d = $('#syncDot'); if (d) d.hidden = !(syncHandle && ['needperm', 'needpass', 'error'].includes(syncState.status)); }
+function scheduleFileSync() { if (!syncHandle) return; clearTimeout(fileSyncT); fileSyncT = setTimeout(() => syncFileNow(false), 1200); }
+async function ensurePerm(interactive) {
+  const o = { mode: 'readwrite' };
+  if ((await syncHandle.queryPermission(o)) === 'granted') return true;
+  if (!interactive) return false;
+  return (await syncHandle.requestPermission(o)) === 'granted';
+}
+async function syncFileNow(interactive) {
+  if (!V || !syncHandle) return;
+  if (syncing) { if (interactive) toast('Синхронизация уже идёт'); return; }
+  syncing = true; setSyncStatus('busy');
+  try {
+    if (!(await ensurePerm(interactive))) { setSyncStatus('needperm'); return; }
+    const text = (await (await syncHandle.getFile()).text()).trim();
+    let res = null, mustWrite = fileDirty || !text;
+    if (text) {
+      let blob; try { blob = parseBlob(text); } catch (e) { throw new Error('файл повреждён или создан не А-ключницей'); }
+      const r = await openBlob(blob, { interactive, adoptDefault: true, text: 'Файл синхронизации зашифрован другим мастер-паролем (например, его сменили на другом устройстве). Введите этот пароль.' });
+      if (!V) return;
+      if (!r) { setSyncStatus(interactive ? 'idle' : 'needpass'); return; }
+      if (r.adopt) adoptKey(r);
+      const fileData = normData(r.data);
+      res = mergeData(V.data, fileData);
+      if (!r.same || canon(V.data) !== canon(fileData)) mustWrite = true;
+      if (changed(res) || r.adopt) render();
+    }
+    if (mustWrite) {
+      const out = await Crypto.seal(V.key, V.salt, V.iter, { v: 1, groups: V.data.groups, items: V.data.items, tomb: V.data.tomb });
+      const w = await syncHandle.createWritable(); await w.write(JSON.stringify(out)); await w.close();
+    }
+    fileDirty = false;
+    syncState.lastMod = (await syncHandle.getFile()).lastModified; syncState.last = now(); syncState.err = '';
+    if (V) { V.data.settings.lastBackup = now(); await persistLocal(); renderBanner(); }
+    setSyncStatus('ok');
+    if (interactive) showMergeResult(res || {});
+  } catch (e) {
+    syncState.err = (e && e.message) || String(e); setSyncStatus('error');
+    if (interactive) toast('Не удалось синхронизировать: ' + syncState.err, 'err');
+  } finally { syncing = false; }
+}
+async function pollFile() {
+  if (!V || !syncHandle || syncing || document.hidden || syncState.status !== 'ok') return;
+  try { if ((await syncHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') return; const f = await syncHandle.getFile(); if (f.lastModified > syncState.lastMod) syncFileNow(false); } catch (e) {}
+}
+async function linkSync(mode) {
+  const types = [{ description: 'Файл А-ключницы', accept: { 'application/octet-stream': ['.kluch'] } }];
+  let h;
+  try {
+    if (mode === 'new') h = await window.showSaveFilePicker({ suggestedName: `${FILE_BASE}-sync.kluch`, types });
+    else [h] = await window.showOpenFilePicker({ types, multiple: false });
+  } catch (e) { if (e.name !== 'AbortError') toast('Не удалось выбрать файл: ' + e.message, 'err'); return; }
+  syncHandle = h; try { await kv('set', 'syncHandle', h); } catch (e) {}
+  fileDirty = true; // make sure our data lands in the file
+  await syncFileNow(true);
+}
+function refreshSyncPanel() {
+  if (!syncPanel || !syncPanel.isConnected) { syncPanel = null; return; }
+  const st = syncState.status;
+  if (!syncHandle) {
+    syncPanel.innerHTML = `<div class="btns"><button type="button" class="btn primary" data-fs="new">${ic('plus')} Создать файл синхронизации</button><button type="button" class="btn" data-fs="open">${ic('file')} Выбрать существующий</button></div>`;
+    return;
+  }
+  const label = { ok: `синхронизировано ${fmtTime(syncState.last)}`, busy: 'синхронизация…', idle: 'ещё не синхронизировано в этот раз', needperm: 'нужно разрешение браузера: нажмите «Синхронизировать»', needpass: 'файл зашифрован другим паролем: нажмите «Синхронизировать»', error: 'ошибка: ' + esc(syncState.err) }[st] || '';
+  syncPanel.innerHTML = `<div class="status" data-s="${st}"><span class="st-dot"></span><span><b>${esc(syncHandle.name)}</b><br>${label}</span></div><div class="btns"><button type="button" class="btn primary" data-fs="now"${st === 'busy' ? ' disabled' : ''}>${ic('sync')} Синхронизировать</button><button type="button" class="btn" data-fs="unlink">${ic('x')} Отвязать</button></div>`;
+}
+function openSync(opts = {}) {
+  const scope0 = realGroup(opts.groupId) || 'all';
+  const cnt = id => V.data.items.filter(i => i.groupId === id).length;
+  const m = openModal({ title: 'Синхронизация и перенос', html: `
+    <p class="txt">Пароли хранятся только на ваших устройствах. Чтобы перенести их, А-ключница создаёт <b>зашифрованный файл</b>. Передайте его как удобно: через iCloud Drive, Google Диск, OneDrive, Яндекс Диск, флешку или «Избранное» в Telegram. Без пароля файл бесполезен.</p>
+    ${CAN_FS ? `<div class="sec"><h4>${ic('sync')} Автосинхронизация на компьютере</h4><p>Создайте файл в папке OneDrive, Google Диска или Яндекс Диска. А-ключница будет сама забирать из него изменения и записывать свои. На телефоне открывайте этот же файл кнопкой «Открыть файл» ниже.</p><div id="x_fs"></div></div>` : ''}
+    <div class="sec"><h4>${ic('upload')} Отправить на другое устройство</h4>
+      <div class="fld"><label class="lbl" for="x_scope">Что передать</label><select id="x_scope"><option value="all">Все записи (${V.data.items.length})</option>${sortedGroups().map(g => `<option value="${g.id}"${g.id === scope0 ? ' selected' : ''}>Только группа ${esc(g.emoji)} ${esc(g.name)} (${cnt(g.id)})</option>`).join('')}</select></div>
+      <div class="fld"><label class="lbl" for="x_mode">Каким паролем закрыть файл</label><select id="x_mode"><option value="master">Мой мастер-пароль</option><option value="custom">Отдельный пароль</option></select><p class="hint">Мастер-пароль подходит для своих устройств. Отдельный пароль нужен, если отдаёте группу другому человеку.</p></div>
+      <div class="fld" id="x_pwbox" hidden><div class="row"><input type="password" id="x_pw" placeholder="Пароль для файла, от 8 символов" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="icon-btn" data-eye></button></div><p class="hint">Сообщите его получателю отдельно, не в том же сообщении, что и файл.</p></div>
+      <div class="btns">${CAN_DOWNLOAD ? `<button type="button" class="btn primary" id="x_save" disabled>${ic('download')} Сохранить файл</button>` : ''}${CAN_SHARE ? `<button type="button" class="btn" id="x_share" disabled>${ic('share')} Поделиться…</button>` : ''}<button type="button" class="btn${CAN_DOWNLOAD ? '' : ' primary'}" id="x_copy" disabled>${ic('copy')} Скопировать как текст</button></div>
+      <p class="hint" id="x_state">Готовлю…</p>
+    </div>
+    <div class="sec"><h4>${ic('download')} Получить с другого устройства</h4><p>Новые и изменённые записи добавятся, удалённые на другом устройстве удалятся и здесь. Если запись меняли в двух местах, останется более свежая версия.</p>
+      <div class="btns"><label class="btn primary" for="x_file">${ic('file')} Открыть файл…</label><input type="file" id="x_file" class="vh"><button type="button" class="btn" id="x_paste">${ic('paste')} Вставить текст</button></div>
+    </div>`,
+    onMount(b, m) {
+      const F = id => b.querySelector('#' + id);
+      if (CAN_FS) {
+        syncPanel = F('x_fs'); refreshSyncPanel();
+        syncPanel.onclick = e => { const x = e.target.closest('[data-fs]'); if (!x) return; const a = x.dataset.fs;
+          if (a === 'new' || a === 'open') linkSync(a); else if (a === 'now') syncFileNow(true); else if (a === 'unlink') unlinkSync(); };
+      }
+      let prepared = null, prepT = null, ver = 0;
+      const btns = ['x_save', 'x_share', 'x_copy'].map(F).filter(Boolean);
+      const prepare = async () => {
+        const my = ++ver; prepared = null; btns.forEach(x => x.disabled = true);
+        const scope = F('x_scope').value, custom = F('x_mode').value === 'custom', pw = F('x_pw').value;
+        F('x_pwbox').hidden = !custom;
+        if (custom && Array.from(pw).length < 8) { F('x_state').textContent = 'Введите пароль для файла (не короче 8 символов).'; return; }
+        F('x_state').textContent = 'Шифрую…';
+        const data = exportData(scope);
+        let blob;
+        if (custom) { const salt = rand(16); const key = await Crypto.derive(pw, salt, KDF_ITER); blob = await Crypto.seal(key, salt, KDF_ITER, data); }
+        else blob = await Crypto.seal(V.key, V.salt, V.iter, data);
+        if (my !== ver) return;
+        const g = groupById(scope), json = JSON.stringify(blob);
+        prepared = { scope, json, text: toTransferText(json), name: `${FILE_BASE}${g && safeName(g.name) ? '-' + safeName(g.name) : ''}-${dateStamp()}.kluch` };
+        btns.forEach(x => x.disabled = false);
+        F('x_state').textContent = `Файл готов: ${countLabel(data.items.length)}, ${custom ? 'закрыт отдельным паролем' : 'закрыт вашим мастер-паролем'}.`;
+      };
+      const later = () => { clearTimeout(prepT); prepT = setTimeout(prepare, 350); };
+      F('x_scope').onchange = prepare; F('x_mode').onchange = () => { prepare(); if (F('x_mode').value === 'custom') F('x_pw').focus(); }; F('x_pw').addEventListener('input', later);
+      prepare();
+      if (F('x_save')) F('x_save').onclick = () => { if (!prepared) return; download(prepared.name, prepared.json); markBackup(prepared.scope); toast('Файл сохранён в «Загрузки»'); };
+      if (F('x_share')) F('x_share').onclick = () => {
+        if (!prepared) return;
+        let file = new File([prepared.json], prepared.name, { type: 'application/octet-stream' });
+        if (!navigator.canShare({ files: [file] })) file = new File([prepared.json], prepared.name + '.txt', { type: 'text/plain' });
+        navigator.share({ files: [file], title: prepared.name }).then(() => markBackup(prepared.scope), e => { if (e.name !== 'AbortError') toast('Не удалось поделиться: ' + e.message, 'err'); });
+      };
+      F('x_copy').onclick = () => { if (!prepared) return; copyText(prepared.text, 'Зашифрованный текст скопирован. Вставьте его на другом устройстве: Синхронизация → «Вставить текст»'); markBackup(prepared.scope); };
+      F('x_file').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (await importText(await f.text())) m.close(); };
+      F('x_paste').onclick = () => openPaste();
+    } });
+  m.onClose = () => { syncPanel = null; };
+}
+
+/* ---------- wiring ---------- */
+function init() {
+  $$('[data-ic]').forEach(el => el.insertAdjacentHTML('afterbegin', ic(el.dataset.ic)));
+  bindEye($('#lock'));
+  $('#createBtn').onclick = onCreate; onEnter($('#newPass2'), onCreate); onEnter($('#newPass'), () => $('#newPass2').focus());
+  $('#newPass').addEventListener('input', () => setMeter($('#newMeter'), $('#newPass').value));
+  $('#unlockBtn').onclick = onUnlock; onEnter($('#unlockPass'), onUnlock);
+  $('#restoreBtn').onclick = openRestore; $('#forgotBtn').onclick = onForgot; $('#demoBtn').onclick = startDemo;
+
+  $('#q').addEventListener('input', () => { ui.q = $('#q').value; renderGroups(); renderList(); });
+  $('#groups').addEventListener('click', e => {
+    const b = e.target.closest('.gchip'); if (!b) return;
+    if (b.id === 'addGroupBtn') { openGroupEditor(null, g => { ui.group = g.id; render(); }); return; }
+    ui.group = b.dataset.g; ui.q = ''; $('#q').value = ''; render(); $('#main').scrollTop = 0;
+  });
+  $('#list').addEventListener('click', e => {
+    const eb = e.target.closest('[data-empty]');
+    if (eb) { const a = eb.dataset.empty; if (a === 'add') openEditor(null); else if (a === 'sync') openSync(); else if (a === 'csv') openCsvImport(); else if (a === 'pick') startPicking(); return; }
+    const row = e.target.closest('.item'); if (!row) return;
+    const it = V.data.items.find(x => x.id === row.dataset.id); if (!it) return;
+    const act = e.target.closest('[data-act]');
+    if (act) { if (act.dataset.act === 'user') copyText(it.username, 'Логин скопирован'); else copyText(it.password, 'Пароль скопирован', true); return; }
+    if (ui.selecting) { if (ui.sel.has(it.id)) ui.sel.delete(it.id); else ui.sel.add(it.id); renderList(); return; }
+    openEditor(it);
+  });
+  $('#list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('item')) { e.preventDefault(); e.target.click(); } });
+  $('#list').addEventListener('contextmenu', e => { const row = e.target.closest('.item'); if (!row || ui.selecting) return; e.preventDefault(); ui.selecting = true; ui.sel.add(row.dataset.id); renderList(); });
+  $('#banner').addEventListener('click', e => { if (e.target.closest('[data-banner]')) openSync(); });
+  $('#fab').onclick = () => openEditor(null);
+  $('#syncBtn').onclick = () => openSync();
+  $('#genBtn').onclick = () => openGenerator();
+  $('#settingsBtn').onclick = openSettings;
+  $('#lockBtn').onclick = lock;
+  $('#groupMenuBtn').onclick = () => { const g = groupById(ui.group); if (g) openGroupMenu(g); };
+  $('#selectBtn').onclick = () => { ui.selecting = !ui.selecting; ui.sel.clear(); if (!ui.selecting) ui.pickTarget = null; renderList(); };
+  $('#selCancel').onclick = () => { ui.selecting = false; ui.sel.clear(); ui.pickTarget = null; renderList(); };
+  $('#selAll').onclick = () => { const ids = filteredItems().map(i => i.id); const all = ids.every(id => ui.sel.has(id)); ids.forEach(id => all ? ui.sel.delete(id) : ui.sel.add(id)); renderList(); };
+  $('#selMove').onclick = () => { if (ui.sel.size) openMoveTo([...ui.sel]); };
+  $('#selDel').onclick = async () => { const n = ui.sel.size; if (!n) return; if (await confirmDlg({ title: `Удалить ${countLabel(n)}?`, text: 'Записи будут удалены на всех устройствах после синхронизации.', ok: 'Удалить', danger: true })) { deleteItems([...ui.sel]); ui.selecting = false; renderList(); toast('Удалено'); } };
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modals.length) { e.preventDefault(); modals[modals.length - 1].requestClose(); return; }
+    if (e.key === '/' && V && !modals.length && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('#q').focus(); }
+  });
+  ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, () => { lastAct = now(); }, { passive: true, capture: true }));
+  setInterval(checkIdle, 10000);
+  setInterval(pollFile, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkIdle(); pollFile(); } });
+
+  if (!IN_FRAME && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  showLock();
+  loadSyncHandle();
+}
+init();
+})();
+</script>
+</body>
+</html>
